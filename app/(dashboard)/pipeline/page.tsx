@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import {
   Plus, MapPin, DollarSign, User, ArrowUpRight,
-  TrendingUp, X, RotateCcw, Loader2, Inbox,
+  TrendingUp, X, RotateCcw, Loader2, Inbox, ExternalLink,
 } from "lucide-react";
 
 const supabase = createClient();
@@ -39,7 +40,9 @@ const EMPTY_FORM = { address: "", owner_name: "", ask_price: "", arv: "", phone:
 function fmt(n: number) { return "$" + n.toLocaleString(); }
 
 export default function PipelinePage() {
+  const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
+  const [quickLead, setQuickLead] = useState<Lead | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -229,7 +232,8 @@ export default function PipelinePage() {
               draggable
               onDragStart={() => onDragStart(lead.id, "pool")}
               onDragEnd={onDragEnd}
-              className="rounded-xl border p-3 cursor-grab active:cursor-grabbing transition-all"
+              onClick={() => setQuickLead(lead)}
+              className="rounded-xl border p-3 cursor-pointer transition-all"
               style={{
                 background: "var(--surface-2)",
                 borderColor: dragging === lead.id ? "var(--invicta-blue)" : "var(--border)",
@@ -349,7 +353,8 @@ export default function PipelinePage() {
                           draggable
                           onDragStart={() => onDragStart(lead.id, "kanban")}
                           onDragEnd={onDragEnd}
-                          className="rounded-xl border p-3 cursor-grab active:cursor-grabbing transition-all group"
+                          onClick={() => router.push(`/leads/${lead.id}`)}
+                          className="rounded-xl border p-3 cursor-pointer transition-all group"
                           style={{
                             background: "var(--surface-2)",
                             borderColor: dragging === lead.id ? stage.color : "var(--border)",
@@ -383,7 +388,7 @@ export default function PipelinePage() {
                           </div>
                           {/* release button */}
                           <button
-                            onClick={() => releaseLead(lead.id)}
+                            onClick={e => { e.stopPropagation(); releaseLead(lead.id); }}
                             className="mt-2 w-full flex items-center justify-center gap-1 py-1 rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                             style={{ background: "var(--surface-3)", color: "var(--muted-foreground)" }}>
                             <RotateCcw size={10} />
@@ -399,6 +404,64 @@ export default function PipelinePage() {
           </div>
         </div>
       </div>
+
+      {/* Quick Lead Sheet */}
+      {quickLead && (
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+          onClick={e => e.target === e.currentTarget && setQuickLead(null)}>
+          <div className="w-full md:max-w-sm rounded-t-2xl md:rounded-2xl border p-5 flex flex-col gap-4"
+            style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+            <div className="flex items-start justify-between">
+              <div className="flex-1 pr-3">
+                <p className="font-bold leading-snug">{quickLead.address}</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{quickLead.source}</p>
+              </div>
+              <button onClick={() => setQuickLead(null)}
+                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ background: "var(--surface-3)" }}>
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: "Ask Price", value: quickLead.ask_price ? fmt(quickLead.ask_price) : "—", color: "var(--invicta-amber)" },
+                { label: "Est. ARV",  value: quickLead.arv ? fmt(quickLead.arv) : "—",             color: "var(--invicta-blue)" },
+                { label: "Repair",    value: quickLead.repair_est ? fmt(quickLead.repair_est) : "—", color: "var(--invicta-red)" },
+                { label: "MAO (70%)", value: quickLead.arv && quickLead.repair_est ? fmt(Math.round(quickLead.arv * 0.7 - quickLead.repair_est)) : "—", color: "var(--invicta-green)" },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="rounded-xl p-3" style={{ background: "var(--surface-2)" }}>
+                  <p className="text-xs mb-0.5" style={{ color: "var(--muted-foreground)" }}>{label}</p>
+                  <p className="text-base font-bold" style={{ color }}>{value}</p>
+                </div>
+              ))}
+            </div>
+
+            {quickLead.notes && (
+              <p className="text-xs leading-relaxed px-1" style={{ color: "var(--muted-foreground)" }}>
+                {quickLead.notes}
+              </p>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={async () => { await claimLead(quickLead.id, "new"); setQuickLead(null); }}
+                className="flex-1 py-2.5 rounded-xl font-bold text-sm"
+                style={{ background: "var(--invicta-green)", color: "#000" }}>
+                Claim Lead
+              </button>
+              <button
+                onClick={() => { router.push(`/leads/${quickLead.id}`); setQuickLead(null); }}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-sm"
+                style={{ background: "var(--surface-3)", color: "var(--muted-foreground)" }}>
+                <ExternalLink size={13} />
+                Full Detail
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Lead Modal */}
       {showModal && (
