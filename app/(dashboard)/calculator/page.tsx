@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Calculator, TrendingUp, Save, Check } from "lucide-react";
+import { Calculator, TrendingUp, Save, Check, Zap, Loader2, Copy, ChevronDown, ChevronUp } from "lucide-react";
 import PageShell from "@/components/PageShell";
 import { createClient } from "@/utils/supabase/client";
 
@@ -101,6 +101,13 @@ function CalculatorContent() {
   const [financing, setFinancing] = useState("cash");
   const [saved, setSaved] = useState(false);
 
+  // Quick Offer AI
+  const [condition, setCondition] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<any>(null);
+  const [showAi, setShowAi] = useState(false);
+  const [copied, setCopied] = useState(false);
+
   const arvN = parseDollar(arv);
   const repairN = parseDollar(repair);
   const askN = parseDollar(askPrice);
@@ -114,6 +121,36 @@ function CalculatorContent() {
   const roi = askN > 0 && arvN > 0 ? ((mao - askN) / askN) * 100 : null;
 
   const good = askN > 0 && mao > askN;
+
+  async function runQuickOffer() {
+    if (!arv && !askPrice) return;
+    setAiLoading(true);
+    setAiResult(null);
+    const res = await fetch("/api/quick-offer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        address: params.get("address") ?? "the subject property",
+        sqft: null,
+        condition,
+        sellerPrice: askN || null,
+        maoFactor,
+      }),
+    });
+    const data = await res.json();
+    setAiResult(data);
+    if (data.arv) setArv(String(data.arv));
+    if (data.repairLow) setRepair(String(Math.round((data.repairLow + data.repairHigh) / 2)));
+    setAiLoading(false);
+  }
+
+  function copyScript() {
+    if (aiResult?.sellerScript) {
+      navigator.clipboard.writeText(aiResult.sellerScript);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
 
   async function saveToLead() {
     if (!leadId) return;
@@ -195,6 +232,75 @@ function CalculatorContent() {
 
         {/* results */}
         <div className="flex flex-col gap-4">
+
+          {/* Quick Offer AI */}
+          <div className="rounded-2xl border overflow-hidden" style={{ background: "var(--surface)", borderColor: "var(--invicta-purple)40" }}>
+            <button onClick={() => setShowAi(v => !v)}
+              className="w-full px-5 py-3.5 flex items-center justify-between"
+              style={{ background: "var(--invicta-purple)10" }}>
+              <div className="flex items-center gap-2">
+                <Zap size={15} style={{ color: "var(--invicta-purple)" }} />
+                <span className="font-bold text-sm" style={{ color: "var(--invicta-purple)" }}>AI Quick Offer</span>
+                <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>— on the phone? use this</span>
+              </div>
+              {showAi ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+            {showAi && (
+              <div className="p-4 flex flex-col gap-3">
+                <textarea
+                  value={condition}
+                  onChange={e => setCondition(e.target.value)}
+                  placeholder="Describe condition in seller's words — 'needs new kitchen, roof is bad, hasn't been updated since the 80s'"
+                  rows={3}
+                  className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none"
+                  style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--foreground)", fontFamily: "inherit" }}
+                  onFocus={e => (e.target.style.borderColor = "var(--invicta-purple)")}
+                  onBlur={e => (e.target.style.borderColor = "var(--border)")}
+                />
+                <button onClick={runQuickOffer} disabled={aiLoading}
+                  className="flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm"
+                  style={{ background: "var(--invicta-purple)", color: "#fff" }}>
+                  {aiLoading ? <><Loader2 size={14} className="animate-spin" />Analyzing...</> : <><Zap size={14} />Get AI Offer</>}
+                </button>
+                {aiResult && (
+                  <div className="flex flex-col gap-3 pt-2 border-t" style={{ borderColor: "var(--border)" }}>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { label: "AI Est. ARV", value: aiResult.arv ? "$" + Number(aiResult.arv).toLocaleString() : "—", color: "var(--invicta-blue)" },
+                        { label: "Repair Range", value: aiResult.repairLow ? `$${Number(aiResult.repairLow).toLocaleString()}–$${Number(aiResult.repairHigh).toLocaleString()}` : "—", color: "var(--invicta-red)" },
+                        { label: "MAO", value: aiResult.mao ? "$" + Number(aiResult.mao).toLocaleString() : "—", color: "var(--invicta-green)" },
+                        { label: "Max Fee", value: aiResult.maxFee ? "$" + Number(aiResult.maxFee).toLocaleString() : "—", color: "var(--invicta-amber)" },
+                      ].map(({ label, value, color }) => (
+                        <div key={label} className="rounded-xl p-3" style={{ background: "var(--surface-2)" }}>
+                          <p className="text-xs mb-0.5" style={{ color: "var(--muted-foreground)" }}>{label}</p>
+                          <p className="font-bold" style={{ color }}>{value}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {aiResult.repairBreakdown?.length > 0 && (
+                      <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                        {aiResult.repairBreakdown.map((r: string) => <p key={r}>• {r}</p>)}
+                      </div>
+                    )}
+                    {aiResult.sellerScript && (
+                      <div className="rounded-xl p-3" style={{ background: "var(--invicta-green)10", border: "1px solid var(--invicta-green)30" }}>
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs font-bold" style={{ color: "var(--invicta-green)" }}>Script — read this to the seller</p>
+                          <button onClick={copyScript}
+                            className="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-lg"
+                            style={{ background: "var(--invicta-green)20", color: "var(--invicta-green)" }}>
+                            {copied ? <><Check size={11} />Copied</> : <><Copy size={11} />Copy</>}
+                          </button>
+                        </div>
+                        <p className="text-sm italic leading-relaxed">"{aiResult.sellerScript}"</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* MAO highlight */}
           <div className="rounded-2xl border p-6 flex flex-col items-center text-center"
             style={{

@@ -7,6 +7,7 @@ import {
   MapPin, User, Phone, Mail, DollarSign,
   TrendingUp, Calculator, CheckCircle2, Circle,
   Plus, Pencil, Save, X, Loader2, ChevronDown,
+  Megaphone, Copy, Check, Zap,
 } from "lucide-react";
 import PageShell from "@/components/PageShell";
 
@@ -59,6 +60,9 @@ export default function LeadDetailPage() {
   const [activity, setActivity] = useState<Activity[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [matchedBuyers, setMatchedBuyers] = useState<{ id: string; name: string; phone: string | null; min_price: number | null; max_price: number | null }[]>([]);
+  const [campaign, setCampaign] = useState<any>(null);
+  const [campaignLoading, setCampaignLoading] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [stageOpen, setStageOpen] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
@@ -116,6 +120,32 @@ export default function LeadDetailPage() {
       .lte("min_price", lead.ask_price)
       .gte("max_price", lead.ask_price);
     setMatchedBuyers(data ?? []);
+  }
+
+  async function generateCampaign() {
+    if (!lead) return;
+    setCampaignLoading(true);
+    const res = await fetch("/api/buyer-campaign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        address: lead.address,
+        arv: lead.arv,
+        repairs: lead.repair_est,
+        askingPrice: lead.ask_price,
+        assignmentFee: 10000,
+        notes: lead.notes,
+      }),
+    });
+    const data = await res.json();
+    setCampaign(data);
+    setCampaignLoading(false);
+  }
+
+  function copyText(key: string, text: string) {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
   }
 
   async function fetchTasks() {
@@ -297,7 +327,60 @@ export default function LeadDetailPage() {
                   {lead.notes || "No notes yet."}
                 </p>}
           </div>
-        </div>
+
+          {/* buyer campaign — show when under contract */}
+          {(lead.stage === "contract" || lead.stage === "offer") && (
+            <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--invicta-purple)40" }}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Megaphone size={15} style={{ color: "var(--invicta-purple)" }} />
+                  <h2 className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--invicta-purple)" }}>
+                    Buyer Campaign
+                  </h2>
+                </div>
+                <button onClick={generateCampaign} disabled={campaignLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold"
+                  style={{ background: "var(--invicta-purple)", color: "#fff" }}>
+                  {campaignLoading ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
+                  {campaign ? "Regenerate" : "Generate Copy"}
+                </button>
+              </div>
+              {!campaign && !campaignLoading && (
+                <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                  Generate platform-specific marketing copy to blast to your buyers list.
+                </p>
+              )}
+              {campaignLoading && (
+                <div className="flex items-center gap-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
+                  <Loader2 size={14} className="animate-spin" />AI is writing your campaign...
+                </div>
+              )}
+              {campaign && (
+                <div className="flex flex-col gap-3">
+                  {[
+                    { key: "email",       label: "Email",        text: campaign.email ? `Subject: ${campaign.email.subject}\n\n${campaign.email.body}` : null },
+                    { key: "text",        label: "Text",         text: campaign.text },
+                    { key: "facebook",    label: "Facebook",     text: campaign.facebook },
+                    { key: "instagram",   label: "Instagram",    text: campaign.instagram ? `${campaign.instagram.caption}\n\n${campaign.instagram.hashtags}` : null },
+                    { key: "directMail",  label: "Direct Mail",  text: campaign.directMail ? `${campaign.directMail.headline}\n\n${campaign.directMail.body}` : null },
+                  ].filter(p => p.text).map(({ key, label, text }) => (
+                    <div key={key} className="rounded-xl p-3" style={{ background: "var(--surface-2)" }}>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-bold tracking-wider uppercase" style={{ color: "var(--muted-foreground)" }}>{label}</p>
+                        <button onClick={() => copyText(key, text!)}
+                          className="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-lg"
+                          style={{ background: "var(--invicta-purple)20", color: "var(--invicta-purple)" }}>
+                          {copiedKey === key ? <><Check size={10} />Copied</> : <><Copy size={10} />Copy</>}
+                        </button>
+                      </div>
+                      <p className="text-xs leading-relaxed whitespace-pre-line" style={{ color: "var(--foreground)" }}>{text}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>  {/* end left col */}
 
         {/* right col */}
         <div className="flex flex-col gap-4">
