@@ -1,19 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import {
-  User, Bell, Map, Key, Save, Check,
-  Shield, Globe, DollarSign,
-} from "lucide-react";
+import { useState, useEffect } from "react";
+import { User, Bell, Map, Key, Save, Check, Globe } from "lucide-react";
 import PageShell from "@/components/PageShell";
+import { createClient } from "@/utils/supabase/client";
+
+const supabase = createClient();
 
 type Tab = "profile" | "markets" | "notifications" | "integrations";
 
 const TABS: { id: Tab; label: string; icon: React.FC<any> }[] = [
-  { id: "profile",       label: "Profile",       icon: User },
-  { id: "markets",       label: "Markets",        icon: Map },
-  { id: "notifications", label: "Notifications",  icon: Bell },
-  { id: "integrations",  label: "Integrations",   icon: Key },
+  { id: "profile",       label: "Profile",      icon: User },
+  { id: "markets",       label: "Markets",       icon: Map },
+  { id: "notifications", label: "Notifications", icon: Bell },
+  { id: "integrations",  label: "Integrations",  icon: Key },
 ];
 
 function SaveBtn({ onClick, saved }: { onClick: () => void; saved: boolean }) {
@@ -37,15 +37,22 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function Input({ value, onChange, placeholder, type = "text" }: {
-  value: string; onChange: (v: string) => void; placeholder?: string; type?: string;
+function Input({ value, onChange, placeholder, type = "text", readOnly }: {
+  value: string; onChange: (v: string) => void; placeholder?: string; type?: string; readOnly?: boolean;
 }) {
   return (
     <input type={type} value={value} onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
+      readOnly={readOnly}
       className="w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all"
-      style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--foreground)", fontFamily: "inherit" }}
-      onFocus={e => (e.target.style.borderColor = "var(--invicta-green)")}
+      style={{
+        background: readOnly ? "var(--surface-3)" : "var(--surface-2)",
+        borderColor: "var(--border)",
+        color: readOnly ? "var(--muted-foreground)" : "var(--foreground)",
+        fontFamily: "inherit",
+        cursor: readOnly ? "default" : undefined,
+      }}
+      onFocus={e => { if (!readOnly) e.target.style.borderColor = "var(--invicta-green)"; }}
       onBlur={e => (e.target.style.borderColor = "var(--border)")}
     />
   );
@@ -54,42 +61,52 @@ function Input({ value, onChange, placeholder, type = "text" }: {
 export default function SettingsPage() {
   const [tab, setTab] = useState<Tab>("profile");
   const [saved, setSaved] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // profile state
-  const [name, setName] = useState("Brendan Morsey");
+  const [name, setName] = useState("");
   const [partnerName, setPartnerName] = useState("Kol (Koli)");
-  const [email, setEmail] = useState("bcmorea@gmail.com");
+  const [email, setEmail] = useState("");
   const [company, setCompany] = useState("Invicta.ai Wholesale");
   const [phone, setPhone] = useState("");
 
-  // markets state
   const [targetMarkets, setTargetMarkets] = useState("Westchester NY, Bronx NY, Yonkers NY, New Rochelle NY");
   const [minPrice, setMinPrice] = useState("60000");
   const [maxPrice, setMaxPrice] = useState("400000");
   const [propTypes, setPropTypes] = useState("SFR, MFR, Land");
   const [maoFactor, setMaoFactor] = useState("70");
 
-  // notifications
   const [notifs, setNotifs] = useState({
-    newLead: true,
-    followupDue: true,
-    dealMoved: false,
-    weeklyDigest: true,
+    newLead: true, followupDue: true, dealMoved: false, weeklyDigest: true,
   });
 
-  // integrations
   const [propStreamKey, setPropStreamKey] = useState("");
   const [batchLeadsKey, setBatchLeadsKey] = useState("");
   const [posthogKey, setPosthogKey] = useState("");
 
-  function save() {
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data }) => {
+      const uid = data.user?.id ?? null;
+      setUserId(uid);
+      if (data.user?.email) setEmail(data.user.email);
+      if (!uid) return;
+      const { data: profile } = await supabase
+        .from("profiles").select("display_name").eq("id", uid).single();
+      if (profile?.display_name) setName(profile.display_name);
+    });
+  }, []);
+
+  async function save() {
+    if (userId && name.trim()) {
+      await supabase.from("profiles")
+        .update({ display_name: name.trim() })
+        .eq("id", userId);
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   }
 
   return (
     <PageShell title="Settings">
-      <div>
       <div className="flex flex-col md:flex-row gap-6">
         {/* sidebar nav */}
         <div className="flex flex-row md:flex-col gap-1 md:w-44 flex-shrink-0 overflow-x-auto">
@@ -118,16 +135,24 @@ export default function SettingsPage() {
                 <SaveBtn onClick={save} saved={saved} />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Your Name"><Input value={name} onChange={setName} placeholder="Brendan Morsey" /></Field>
-                <Field label="Partner Name"><Input value={partnerName} onChange={setPartnerName} placeholder="Kol (Koli)" /></Field>
-                <Field label="Email"><Input value={email} onChange={setEmail} type="email" placeholder="you@example.com" /></Field>
-                <Field label="Phone"><Input value={phone} onChange={setPhone} placeholder="(914) 555-0000" /></Field>
+                <Field label="Your Name">
+                  <Input value={name} onChange={setName} placeholder="Brendan Morsey" />
+                </Field>
+                <Field label="Partner Name">
+                  <Input value={partnerName} onChange={setPartnerName} placeholder="Kol (Koli)" />
+                </Field>
+                <Field label="Email">
+                  <Input value={email} onChange={() => {}} readOnly />
+                </Field>
+                <Field label="Phone">
+                  <Input value={phone} onChange={setPhone} placeholder="(914) 555-0000" />
+                </Field>
               </div>
               <Field label="Company / Business Name">
                 <Input value={company} onChange={setCompany} placeholder="Invicta Wholesale LLC" />
               </Field>
               <div className="pt-4 border-t" style={{ borderColor: "var(--border)" }}>
-                <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: "var(--muted-foreground)" }}>
+                <p className="text-xs font-bold tracking-widets uppercase mb-3" style={{ color: "var(--muted-foreground)" }}>
                   Change Password
                 </p>
                 <div className="grid grid-cols-2 gap-4">
@@ -180,10 +205,10 @@ export default function SettingsPage() {
                 <SaveBtn onClick={save} saved={saved} />
               </div>
               {[
-                { key: "newLead",       label: "New Lead Added",       desc: "When a lead enters the pipeline or scraper finds new results" },
-                { key: "followupDue",   label: "Follow-up Due",        desc: "Reminder when a follow-up task is due today" },
-                { key: "dealMoved",     label: "Deal Stage Changed",   desc: "When a deal moves to a new pipeline stage" },
-                { key: "weeklyDigest",  label: "Weekly Digest Email",  desc: "Summary of pipeline activity every Monday" },
+                { key: "newLead",      label: "New Lead Added",      desc: "When a lead enters the pipeline or scraper finds new results" },
+                { key: "followupDue",  label: "Follow-up Due",       desc: "Reminder when a follow-up task is due today" },
+                { key: "dealMoved",    label: "Deal Stage Changed",  desc: "When a deal moves to a new pipeline stage" },
+                { key: "weeklyDigest", label: "Weekly Digest Email", desc: "Summary of pipeline activity every Monday" },
               ].map(({ key, label, desc }) => (
                 <div key={key} className="flex items-center justify-between py-3 border-b last:border-0"
                   style={{ borderColor: "var(--border)" }}>
@@ -196,10 +221,7 @@ export default function SettingsPage() {
                     className="w-11 h-6 rounded-full relative transition-all"
                     style={{ background: (notifs as any)[key] ? "var(--invicta-green)" : "var(--surface-3)" }}>
                     <span className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform"
-                      style={{
-                        background: "#fff",
-                        transform: (notifs as any)[key] ? "translateX(20px)" : "translateX(0)",
-                      }} />
+                      style={{ background: "#fff", transform: (notifs as any)[key] ? "translateX(20px)" : "translateX(0)" }} />
                   </button>
                 </div>
               ))}
@@ -242,7 +264,6 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
-      </div>
       </div>
     </PageShell>
   );

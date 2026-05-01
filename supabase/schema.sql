@@ -83,6 +83,29 @@ create policy "leads_delete" on public.leads for delete to authenticated using (
 create policy "activity_select" on public.lead_activity for select to authenticated using (true);
 create policy "activity_insert" on public.lead_activity for insert to authenticated with check (auth.uid() = user_id);
 
+-- Cash Buyers
+create table public.buyers (
+  id uuid default gen_random_uuid() primary key,
+  name text not null,
+  phone text,
+  email text,
+  markets text[] default '{}',
+  min_price bigint,
+  max_price bigint,
+  prop_types text[] default '{}',
+  cash_proof boolean default false,
+  deals_completed int default 0,
+  notes text,
+  created_by uuid references auth.users(id),
+  created_at timestamptz default now()
+);
+
+alter table public.buyers enable row level security;
+create policy "buyers_select" on public.buyers for select to authenticated using (true);
+create policy "buyers_insert" on public.buyers for insert to authenticated with check (true);
+create policy "buyers_update" on public.buyers for update to authenticated using (true);
+create policy "buyers_delete" on public.buyers for delete to authenticated using (true);
+
 -- ============================================================
 -- Realtime
 -- ============================================================
