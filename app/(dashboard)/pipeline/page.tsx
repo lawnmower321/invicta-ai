@@ -64,10 +64,11 @@ export default function PipelinePage() {
   }, []);
 
   async function fetchLeads() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("leads")
-      .select("*, profiles(display_name)")
+      .select("*")
       .order("created_at", { ascending: false });
+    if (error) console.error("fetchLeads error:", error.message, error.code);
     setLeads(data ?? []);
     setLoading(false);
   }
