@@ -18,18 +18,20 @@ export async function GET(req: NextRequest) {
   const apiKey = process.env.RENTCAST_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "RENTCAST_API_KEY not set" }, { status: 500 });
 
-  const url = `https://api.rentcast.io/v1/avm/sale/comparable?address=${encodeURIComponent(address)}&maxRadius=${radius}&limit=10`;
+  const url = `https://api.rentcast.io/v1/avm/sale?address=${encodeURIComponent(address)}&maxRadius=${radius}&compCount=10`;
   console.log("Rentcast URL:", url);
 
   const res = await fetch(url, { headers: { "X-Api-Key": apiKey, "Accept": "application/json" } });
   const text = await res.text();
-  console.log("Rentcast status:", res.status, "body:", text);
+  console.log("Rentcast status:", res.status, "body:", text.slice(0, 500));
 
   if (!res.ok) {
     return NextResponse.json({ error: `Rentcast ${res.status}`, detail: text, url }, { status: res.status });
   }
 
-  const data = await res.json();
+  const json = await JSON.parse(text);
+  // /v1/avm/sale returns { price, priceRangeLow, priceRangeHigh, comparables: [...] }
+  const data = { comparables: json.comparables ?? [] };
   cache.set(cacheKey, { data, ts: Date.now() });
   return NextResponse.json(data);
 }
