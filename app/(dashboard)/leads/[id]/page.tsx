@@ -45,7 +45,7 @@ type Lead = {
   assigned_to: string | null;
 };
 
-type Task = { id: string; text: string; done: boolean };
+type Task = { id: string; text: string; done: boolean; due_date?: string };
 type Activity = { id: string; action: string; details: string | null; created_at: string; profiles?: { display_name: string } | null };
 
 function fmt(n: number) { return "$" + n.toLocaleString(); }
@@ -58,6 +58,7 @@ export default function LeadDetailPage() {
   const [lead, setLead] = useState<Lead | null>(null);
   const [activity, setActivity] = useState<Activity[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [matchedBuyers, setMatchedBuyers] = useState<{ id: string; name: string; phone: string | null; min_price: number | null; max_price: number | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [stageOpen, setStageOpen] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
@@ -70,6 +71,8 @@ export default function LeadDetailPage() {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
     fetchLead();
     fetchActivity();
+    fetchTasks();
+    fetchMatchedBuyers();
   }, [leadId]);
 
   async function fetchLead() {
@@ -104,6 +107,26 @@ export default function LeadDetailPage() {
     setEditingNotes(false);
   }
 
+  async function fetchMatchedBuyers() {
+    const { data: lead } = await supabase.from("leads").select("ask_price").eq("id", leadId).single();
+    if (!lead?.ask_price) return;
+    const { data } = await supabase
+      .from("buyers")
+      .select("id, name, phone, min_price, max_price")
+      .lte("min_price", lead.ask_price)
+      .gte("max_price", lead.ask_price);
+    setMatchedBuyers(data ?? []);
+  }
+
+  async function fetchTasks() {
+    const { data } = await supabase
+      .from("followups")
+      .select("id, text, done, due_date")
+      .eq("lead_id", leadId)
+      .order("created_at", { ascending: true });
+    setTasks(data ?? []);
+  }
+
   async function addNote() {
     if (!newNote.trim()) return;
     await supabase.from("lead_activity").insert({
@@ -113,14 +136,27 @@ export default function LeadDetailPage() {
     fetchActivity();
   }
 
-  function addTask() {
-    if (!newTask.trim()) return;
-    setTasks(t => [...t, { id: Date.now().toString(), text: newTask.trim(), done: false }]);
+  async function addTask() {
+    if (!newTask.trim() || !lead) return;
+    const today = new Date().toISOString().split("T")[0];
+    const { data } = await supabase.from("followups").insert({
+      text: newTask.trim(),
+      lead_id: leadId,
+      lead_label: lead.address,
+      due_date: today,
+      done: false,
+      priority: "medium",
+      user_id: userId,
+    }).select("id, text, done, due_date").single();
+    if (data) setTasks(t => [...t, data]);
     setNewTask("");
   }
 
-  function toggleTask(id: string) {
+  async function toggleTask(id: string) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
     setTasks(t => t.map(task => task.id === id ? { ...task, done: !task.done } : task));
+    await supabase.from("followups").update({ done: !task.done }).eq("id", id);
   }
 
   if (loading) {
@@ -213,7 +249,7 @@ export default function LeadDetailPage() {
                   style={{ background: "var(--invicta-purple)20", color: "var(--invicta-purple)" }}>
                   <TrendingUp size={12} /> Run Comps
                 </button>
-                <button onClick={() => router.push(`/calculator?ask=${lead.ask_price}&arv=${lead.arv}&repair=${lead.repair_est}`)}
+                <button onClick={() => router.push(`/calculator?ask=${lead.ask_price}&arv=${lead.arv}&repair=${lead.repair_est}&leadId=${leadId}`)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold hover:opacity-80"
                   style={{ background: "var(--invicta-green)20", color: "var(--invicta-green)" }}>
                   <Calculator size={12} /> Calculator
@@ -287,6 +323,34 @@ export default function LeadDetailPage() {
               )}
             </div>
           </div>
+
+          {/* matched buyers */}
+          {matchedBuyers.length > 0 && (
+            <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--invicta-green)40" }}>
+              <h2 className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: "var(--invicta-green)" }}>
+                {matchedBuyers.length} Matching Buyer{matchedBuyers.length !== 1 ? "s" : ""}
+              </h2>
+              <div className="flex flex-col gap-2">
+                {matchedBuyers.map(b => (
+                  <div key={b.id} className="flex items-center justify-between p-3 rounded-xl" style={{ background: "var(--surface-2)" }}>
+                    <div>
+                      <p className="text-sm font-bold">{b.name}</p>
+                      <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                        ${b.min_price?.toLocaleString()} – ${b.max_price?.toLocaleString()}
+                      </p>
+                    </div>
+                    {b.phone && (
+                      <a href={`tel:${b.phone}`}
+                        className="text-xs font-bold px-2.5 py-1.5 rounded-lg"
+                        style={{ background: "var(--invicta-green)20", color: "var(--invicta-green)" }}>
+                        Call
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* tasks */}
           <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>

@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Calculator, TrendingUp, DollarSign, Wrench, ArrowRight, Info } from "lucide-react";
+import { Calculator, TrendingUp, Save, Check } from "lucide-react";
 import PageShell from "@/components/PageShell";
+import { createClient } from "@/utils/supabase/client";
+
+const supabase = createClient();
 
 function fmt(n: number) {
   return isNaN(n) || !isFinite(n) ? "—" : "$" + Math.round(n).toLocaleString();
@@ -86,6 +89,7 @@ function SliderRow({
 
 function CalculatorContent() {
   const params = useSearchParams();
+  const leadId = params.get("leadId");
 
   const [arv, setArv] = useState(params.get("arv") ?? "");
   const [repair, setRepair] = useState(params.get("repair") ?? "");
@@ -95,6 +99,7 @@ function CalculatorContent() {
   const [holdMonths, setHoldMonths] = useState(3);
   const [maoFactor, setMaoFactor] = useState(70);
   const [financing, setFinancing] = useState("cash");
+  const [saved, setSaved] = useState(false);
 
   const arvN = parseDollar(arv);
   const repairN = parseDollar(repair);
@@ -110,8 +115,28 @@ function CalculatorContent() {
 
   const good = askN > 0 && mao > askN;
 
+  async function saveToLead() {
+    if (!leadId) return;
+    await supabase.from("leads").update({
+      arv: arvN || null,
+      repair_est: repairN || null,
+      ask_price: askN || null,
+    }).eq("id", leadId);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  }
+
   return (
-    <PageShell title="Calculator" subtitle="MAO & assignment fee">
+    <PageShell title="Calculator" subtitle="MAO & assignment fee"
+      back={!!leadId}
+      action={leadId ? (
+        <button onClick={saveToLead}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all"
+          style={{ background: saved ? "var(--invicta-green)20" : "var(--invicta-green)", color: saved ? "var(--invicta-green)" : "#000" }}>
+          {saved ? <><Check size={14} />Saved</> : <><Save size={14} />Save to Lead</>}
+        </button>
+      ) : undefined}
+    >
       <div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
