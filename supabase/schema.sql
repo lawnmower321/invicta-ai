@@ -106,6 +106,25 @@ create policy "buyers_insert" on public.buyers for insert to authenticated with 
 create policy "buyers_update" on public.buyers for update to authenticated using (true);
 create policy "buyers_delete" on public.buyers for delete to authenticated using (true);
 
+-- Follow-up Tasks
+create table public.followups (
+  id uuid default gen_random_uuid() primary key,
+  text text not null,
+  lead_label text default 'General',
+  lead_id uuid references public.leads(id) on delete set null,
+  due_date date not null,
+  done boolean default false,
+  priority text default 'medium',
+  user_id uuid references auth.users(id),
+  created_at timestamptz default now()
+);
+
+alter table public.followups enable row level security;
+create policy "followups_select" on public.followups for select to authenticated using (true);
+create policy "followups_insert" on public.followups for insert to authenticated with check (true);
+create policy "followups_update" on public.followups for update to authenticated using (true);
+create policy "followups_delete" on public.followups for delete to authenticated using (true);
+
 -- ============================================================
 -- Realtime
 -- ============================================================
