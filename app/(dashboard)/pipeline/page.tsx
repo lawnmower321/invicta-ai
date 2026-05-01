@@ -170,6 +170,12 @@ export default function PipelinePage() {
   const pool = leads.filter(l => !l.assigned_to);
   const mine = leads.filter(l => l.assigned_to === userId);
   const totalValue = mine.filter(l => l.ask_price).reduce((s, l) => s + (l.ask_price ?? 0), 0);
+  const [mobileTab, setMobileTab] = useState("pool");
+
+  const MOBILE_TABS = [
+    { id: "pool", label: "Pool", count: pool.length, color: "var(--invicta-blue)" },
+    ...STAGES.map(s => ({ id: s.id, label: s.label, count: mine.filter(l => l.stage === s.id).length, color: s.color })),
+  ];
 
   if (loading) {
     return (
@@ -180,227 +186,308 @@ export default function PipelinePage() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex flex-col h-[calc(100dvh-128px)] md:h-screen overflow-hidden">
 
-      {/* ── Pool Panel ── */}
-      <div
-        className="flex flex-col border-r flex-shrink-0 transition-all"
-        style={{
-          width: 280,
-          background: overPool ? "var(--invicta-blue)08" : "var(--surface)",
-          borderColor: overPool ? "var(--invicta-blue)" : "var(--border)",
-        }}
-        onDragOver={e => { e.preventDefault(); setOverPool(true); }}
-        onDragLeave={() => setOverPool(false)}
-        onDrop={onDropPool}
-      >
-        {/* pool header */}
-        <div className="px-4 pt-6 pb-4 border-b flex-shrink-0" style={{ borderColor: "var(--border)" }}>
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <Inbox size={15} style={{ color: "var(--invicta-blue)" }} />
-              <span className="font-bold text-sm tracking-wide">Lead Pool</span>
-            </div>
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full"
-              style={{ background: "var(--invicta-blue)20", color: "var(--invicta-blue)" }}>
-              {pool.length}
-            </span>
-          </div>
-          <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-            Drag a lead into your pipeline to claim it
-          </p>
-          <button onClick={() => setShowModal(true)}
-            className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-xl font-bold text-xs transition-all hover:opacity-90"
-            style={{ background: "var(--invicta-blue)20", color: "var(--invicta-blue)", border: "1px dashed var(--invicta-blue)50" }}>
-            <Plus size={13} />
-            Add to Pool
-          </button>
-        </div>
+      {/* ── MOBILE: Tab + List ── */}
+      <div className="flex flex-col flex-1 md:hidden overflow-hidden">
 
-        {/* pool cards */}
-        <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
-          {pool.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full gap-2"
-              style={{ color: "var(--muted-foreground)" }}>
-              <Inbox size={24} className="opacity-30" />
-              <p className="text-xs text-center">Pool is empty — add leads or run the scraper</p>
-            </div>
-          )}
-          {pool.map(lead => (
-            <div
-              key={lead.id}
-              draggable
-              onDragStart={() => onDragStart(lead.id, "pool")}
-              onDragEnd={onDragEnd}
-              onClick={() => setQuickLead(lead)}
-              className="rounded-xl border p-3 cursor-pointer transition-all"
+        {/* tab bar */}
+        <div className="flex overflow-x-auto border-b flex-shrink-0 px-2 py-2 gap-1"
+          style={{ borderColor: "var(--border)", background: "var(--surface)", scrollbarWidth: "none" }}>
+          {MOBILE_TABS.map(tab => (
+            <button key={tab.id} onClick={() => setMobileTab(tab.id)}
+              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
               style={{
-                background: "var(--surface-2)",
-                borderColor: dragging === lead.id ? "var(--invicta-blue)" : "var(--border)",
-                opacity: dragging === lead.id ? 0.4 : 1,
-                borderLeftWidth: 3,
-                borderLeftColor: "var(--invicta-blue)",
+                background: mobileTab === tab.id ? `${tab.color}20` : "transparent",
+                color: mobileTab === tab.id ? tab.color : "var(--muted-foreground)",
               }}>
-              <div className="flex items-start gap-1.5 mb-1.5">
-                <MapPin size={11} className="flex-shrink-0 mt-0.5" style={{ color: "var(--invicta-blue)" }} />
-                <p className="text-xs font-bold leading-snug">{lead.address}</p>
-              </div>
-              {lead.owner_name && (
-                <div className="flex items-center gap-1 mb-1.5">
-                  <User size={9} style={{ color: "var(--muted-foreground)" }} />
-                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{lead.owner_name}</p>
-                </div>
-              )}
-              <div className="flex items-center justify-between">
-                <span className="text-xs px-1.5 py-0.5 rounded font-bold"
-                  style={{ background: "var(--surface-3)", color: "var(--muted-foreground)" }}>
-                  {lead.source}
+              {tab.label}
+              {tab.count > 0 && (
+                <span className="px-1.5 rounded font-bold text-xs"
+                  style={{ background: `${tab.color}25`, color: tab.color }}>
+                  {tab.count}
                 </span>
-                {lead.ask_price && (
-                  <span className="text-xs font-bold" style={{ color: "var(--invicta-amber)" }}>
-                    {fmt(lead.ask_price)}
-                  </span>
-                )}
-              </div>
-            </div>
+              )}
+            </button>
           ))}
         </div>
 
-        {overPool && dragSource.current === "kanban" && (
-          <div className="px-3 py-2 text-xs font-bold text-center border-t flex-shrink-0"
-            style={{ color: "var(--invicta-blue)", borderColor: "var(--invicta-blue)" }}>
-            Drop to release back to pool
+        {/* pool sub-header */}
+        {mobileTab === "pool" && (
+          <div className="px-4 py-2.5 border-b flex-shrink-0 flex items-center justify-between"
+            style={{ borderColor: "var(--border)" }}>
+            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Tap a lead to claim or view</p>
+            <button onClick={() => setShowModal(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold"
+              style={{ background: "var(--invicta-blue)20", color: "var(--invicta-blue)" }}>
+              <Plus size={11} /> Add
+            </button>
           </div>
         )}
+
+        {/* card list */}
+        <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
+
+          {/* pool cards */}
+          {mobileTab === "pool" && (pool.length === 0
+            ? <div className="flex flex-col items-center justify-center flex-1 gap-2 py-16" style={{ color: "var(--muted-foreground)" }}>
+                <Inbox size={28} className="opacity-30" />
+                <p className="text-xs text-center">Pool is empty — run the scraper or add leads</p>
+              </div>
+            : pool.map(lead => (
+                <div key={lead.id} onClick={() => setQuickLead(lead)}
+                  className="rounded-xl border p-4 cursor-pointer active:opacity-60 transition-opacity"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)", borderLeftWidth: 3, borderLeftColor: "var(--invicta-blue)" }}>
+                  <div className="flex items-start gap-2 mb-2">
+                    <MapPin size={12} className="flex-shrink-0 mt-0.5" style={{ color: "var(--invicta-blue)" }} />
+                    <p className="text-sm font-bold leading-snug">{lead.address}</p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs px-2 py-0.5 rounded-full font-bold"
+                      style={{ background: "var(--surface-3)", color: "var(--muted-foreground)" }}>
+                      {lead.source}
+                    </span>
+                    {lead.ask_price && (
+                      <span className="text-sm font-bold" style={{ color: "var(--invicta-amber)" }}>
+                        {fmt(lead.ask_price)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))
+          )}
+
+          {/* kanban stage cards */}
+          {mobileTab !== "pool" && (() => {
+            const stage = STAGES.find(s => s.id === mobileTab)!;
+            const stageLeads = mine.filter(l => l.stage === mobileTab);
+            return stageLeads.length === 0
+              ? <div className="flex flex-col items-center justify-center flex-1 gap-2 py-16" style={{ color: "var(--muted-foreground)" }}>
+                  <p className="text-sm font-bold">No leads in {stage.label}</p>
+                  <p className="text-xs">Claim from the Pool tab</p>
+                </div>
+              : stageLeads.map(lead => {
+                  const mao = lead.arv && lead.repair_est ? Math.round(lead.arv * 0.7 - lead.repair_est) : null;
+                  const spread = mao && lead.ask_price ? mao - lead.ask_price : null;
+                  return (
+                    <div key={lead.id} onClick={() => router.push(`/leads/${lead.id}`)}
+                      className="rounded-xl border p-4 cursor-pointer active:opacity-60 transition-opacity"
+                      style={{ background: "var(--surface)", borderColor: "var(--border)", borderLeftWidth: 3, borderLeftColor: stage.color }}>
+                      <div className="flex items-start gap-2 mb-2">
+                        <MapPin size={12} className="flex-shrink-0 mt-0.5" style={{ color: stage.color }} />
+                        <p className="text-sm font-bold leading-snug flex-1">{lead.address}</p>
+                        {spread !== null && (
+                          <span className="text-xs font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
+                            style={{ background: spread > 0 ? "var(--invicta-green)20" : "var(--invicta-red)20", color: spread > 0 ? "var(--invicta-green)" : "var(--invicta-red)" }}>
+                            {spread > 0 ? "+" : ""}{fmt(spread)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        {lead.ask_price
+                          ? <span className="text-sm font-bold">{fmt(lead.ask_price)}</span>
+                          : <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>No price</span>}
+                        <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                          {lead.owner_name ?? "Tap for detail →"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                });
+          })()}
+        </div>
       </div>
 
-      {/* ── My Pipeline Kanban ── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* header */}
-        <div className="px-6 pt-6 pb-4 flex items-center justify-between flex-shrink-0 border-b"
-          style={{ borderColor: "var(--border)" }}>
-          <div>
-            <h1 className="text-xl font-bold tracking-wide">My Pipeline</h1>
-            <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
-              {mine.length} leads · {totalValue > 0 ? fmt(totalValue) + " ask value" : "no value yet"}
+      {/* ── DESKTOP: Pool + Kanban ── */}
+      <div className="hidden md:flex flex-1 overflow-hidden">
+
+        {/* Pool Panel */}
+        <div
+          className="flex flex-col border-r flex-shrink-0 transition-all"
+          style={{
+            width: 280,
+            background: overPool ? "var(--invicta-blue)08" : "var(--surface)",
+            borderColor: overPool ? "var(--invicta-blue)" : "var(--border)",
+          }}
+          onDragOver={e => { e.preventDefault(); setOverPool(true); }}
+          onDragLeave={() => setOverPool(false)}
+          onDrop={onDropPool}
+        >
+          <div className="px-4 pt-6 pb-4 border-b flex-shrink-0" style={{ borderColor: "var(--border)" }}>
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <Inbox size={15} style={{ color: "var(--invicta-blue)" }} />
+                <span className="font-bold text-sm tracking-wide">Lead Pool</span>
+              </div>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                style={{ background: "var(--invicta-blue)20", color: "var(--invicta-blue)" }}>
+                {pool.length}
+              </span>
+            </div>
+            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+              Drag into pipeline to claim · click to preview
             </p>
+            <button onClick={() => setShowModal(true)}
+              className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-xl font-bold text-xs transition-all hover:opacity-90"
+              style={{ background: "var(--invicta-blue)20", color: "var(--invicta-blue)", border: "1px dashed var(--invicta-blue)50" }}>
+              <Plus size={13} /> Add to Pool
+            </button>
           </div>
-          <div className="flex items-center gap-3">
-            {STAGES.map(s => {
-              const count = mine.filter(l => l.stage === s.id).length;
-              return (
-                <div key={s.id} className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: s.color }} />
-                  <span className="text-xs font-bold" style={{ color: count > 0 ? s.color : "var(--muted-foreground)" }}>
-                    {count}
-                  </span>
+
+          <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
+            {pool.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-full gap-2" style={{ color: "var(--muted-foreground)" }}>
+                <Inbox size={24} className="opacity-30" />
+                <p className="text-xs text-center">Pool is empty — add leads or run the scraper</p>
+              </div>
+            )}
+            {pool.map(lead => (
+              <div key={lead.id} draggable
+                onDragStart={() => onDragStart(lead.id, "pool")}
+                onDragEnd={onDragEnd}
+                onClick={() => setQuickLead(lead)}
+                className="rounded-xl border p-3 cursor-pointer transition-all"
+                style={{
+                  background: "var(--surface-2)",
+                  borderColor: dragging === lead.id ? "var(--invicta-blue)" : "var(--border)",
+                  opacity: dragging === lead.id ? 0.4 : 1,
+                  borderLeftWidth: 3, borderLeftColor: "var(--invicta-blue)",
+                }}>
+                <div className="flex items-start gap-1.5 mb-1.5">
+                  <MapPin size={11} className="flex-shrink-0 mt-0.5" style={{ color: "var(--invicta-blue)" }} />
+                  <p className="text-xs font-bold leading-snug">{lead.address}</p>
                 </div>
-              );
-            })}
+                {lead.owner_name && (
+                  <div className="flex items-center gap-1 mb-1.5">
+                    <User size={9} style={{ color: "var(--muted-foreground)" }} />
+                    <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{lead.owner_name}</p>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs px-1.5 py-0.5 rounded font-bold"
+                    style={{ background: "var(--surface-3)", color: "var(--muted-foreground)" }}>
+                    {lead.source}
+                  </span>
+                  {lead.ask_price && (
+                    <span className="text-xs font-bold" style={{ color: "var(--invicta-amber)" }}>
+                      {fmt(lead.ask_price)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
+
+          {overPool && dragSource.current === "kanban" && (
+            <div className="px-3 py-2 text-xs font-bold text-center border-t flex-shrink-0"
+              style={{ color: "var(--invicta-blue)", borderColor: "var(--invicta-blue)" }}>
+              Drop to release back to pool
+            </div>
+          )}
         </div>
 
-        {/* kanban columns */}
-        <div className="flex-1 overflow-x-auto overflow-y-hidden p-4">
-          <div className="flex gap-3 h-full" style={{ minWidth: `${STAGES.length * 260}px` }}>
-            {STAGES.map(stage => {
-              const stageLeads = mine.filter(l => l.stage === stage.id);
-              const isOver = overCol === stage.id;
-
-              return (
-                <div
-                  key={stage.id}
-                  className="flex flex-col flex-shrink-0 rounded-2xl border transition-all"
-                  style={{
-                    width: 248,
-                    background: isOver ? stage.bg : "var(--surface)",
-                    borderColor: isOver ? stage.color : "var(--border)",
-                  }}
-                  onDragOver={e => { e.preventDefault(); setOverCol(stage.id); }}
-                  onDragLeave={() => setOverCol(null)}
-                  onDrop={() => onDropKanban(stage.id)}
-                >
-                  {/* column header */}
-                  <div className="px-3 pt-3 pb-2.5 flex items-center justify-between flex-shrink-0 border-b"
-                    style={{ borderColor: "var(--border)" }}>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full" style={{ background: stage.color }} />
-                      <span className="text-xs font-bold tracking-wide">{stage.label}</span>
-                    </div>
-                    <span className="text-xs font-bold px-1.5 py-0.5 rounded-full"
-                      style={{ background: stage.bg, color: stage.color }}>
-                      {stageLeads.length}
-                    </span>
+        {/* Kanban */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="px-6 pt-6 pb-4 flex items-center justify-between flex-shrink-0 border-b"
+            style={{ borderColor: "var(--border)" }}>
+            <div>
+              <h1 className="text-xl font-bold tracking-wide">My Pipeline</h1>
+              <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
+                {mine.length} leads · {totalValue > 0 ? fmt(totalValue) + " ask value" : "no value yet"}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              {STAGES.map(s => {
+                const count = mine.filter(l => l.stage === s.id).length;
+                return (
+                  <div key={s.id} className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: s.color }} />
+                    <span className="text-xs font-bold" style={{ color: count > 0 ? s.color : "var(--muted-foreground)" }}>{count}</span>
                   </div>
+                );
+              })}
+            </div>
+          </div>
 
-                  {/* cards */}
-                  <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
-                    {stageLeads.length === 0 && (
-                      <div className="flex-1 flex items-center justify-center rounded-xl border border-dashed"
-                        style={{ borderColor: "var(--border)", minHeight: 60 }}>
-                        <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                          {isOver ? "Drop here" : "Empty"}
-                        </p>
+          <div className="flex-1 overflow-x-auto overflow-y-hidden p-4">
+            <div className="flex gap-3 h-full" style={{ minWidth: `${STAGES.length * 260}px` }}>
+              {STAGES.map(stage => {
+                const stageLeads = mine.filter(l => l.stage === stage.id);
+                const isOver = overCol === stage.id;
+                return (
+                  <div key={stage.id}
+                    className="flex flex-col flex-shrink-0 rounded-2xl border transition-all"
+                    style={{ width: 248, background: isOver ? stage.bg : "var(--surface)", borderColor: isOver ? stage.color : "var(--border)" }}
+                    onDragOver={e => { e.preventDefault(); setOverCol(stage.id); }}
+                    onDragLeave={() => setOverCol(null)}
+                    onDrop={() => onDropKanban(stage.id)}
+                  >
+                    <div className="px-3 pt-3 pb-2.5 flex items-center justify-between flex-shrink-0 border-b"
+                      style={{ borderColor: "var(--border)" }}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full" style={{ background: stage.color }} />
+                        <span className="text-xs font-bold tracking-wide">{stage.label}</span>
                       </div>
-                    )}
-                    {stageLeads.map(lead => {
-                      const mao = lead.arv && lead.repair_est ? Math.round(lead.arv * 0.7 - lead.repair_est) : null;
-                      const spread = mao && lead.ask_price ? mao - lead.ask_price : null;
-
-                      return (
-                        <div
-                          key={lead.id}
-                          draggable
-                          onDragStart={() => onDragStart(lead.id, "kanban")}
-                          onDragEnd={onDragEnd}
-                          onClick={() => router.push(`/leads/${lead.id}`)}
-                          className="rounded-xl border p-3 cursor-pointer transition-all group"
-                          style={{
-                            background: "var(--surface-2)",
-                            borderColor: dragging === lead.id ? stage.color : "var(--border)",
-                            opacity: dragging === lead.id ? 0.4 : 1,
-                            borderLeftWidth: 3,
-                            borderLeftColor: stage.color,
-                          }}>
-                          <div className="flex items-start gap-1.5 mb-1.5">
-                            <MapPin size={11} className="flex-shrink-0 mt-0.5" style={{ color: stage.color }} />
-                            <p className="text-xs font-bold leading-snug">{lead.address}</p>
-                          </div>
-                          {lead.owner_name && (
-                            <p className="text-xs mb-1.5 pl-4" style={{ color: "var(--muted-foreground)" }}>
-                              {lead.owner_name}
-                            </p>
-                          )}
-                          <div className="flex items-center justify-between pt-2 border-t"
-                            style={{ borderColor: "var(--border)" }}>
-                            {lead.ask_price
-                              ? <span className="text-xs font-bold">{fmt(lead.ask_price)}</span>
-                              : <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>No price</span>}
-                            {spread !== null && (
-                              <span className="text-xs font-bold px-1.5 py-0.5 rounded-full"
-                                style={{
-                                  background: spread > 0 ? "var(--invicta-green)20" : "var(--invicta-red)20",
-                                  color: spread > 0 ? "var(--invicta-green)" : "var(--invicta-red)",
-                                }}>
-                                {spread > 0 ? "+" : ""}{fmt(spread)}
-                              </span>
-                            )}
-                          </div>
-                          {/* release button */}
-                          <button
-                            onClick={e => { e.stopPropagation(); releaseLead(lead.id); }}
-                            className="mt-2 w-full flex items-center justify-center gap-1 py-1 rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                            style={{ background: "var(--surface-3)", color: "var(--muted-foreground)" }}>
-                            <RotateCcw size={10} />
-                            Release
-                          </button>
+                      <span className="text-xs font-bold px-1.5 py-0.5 rounded-full"
+                        style={{ background: stage.bg, color: stage.color }}>
+                        {stageLeads.length}
+                      </span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
+                      {stageLeads.length === 0 && (
+                        <div className="flex-1 flex items-center justify-center rounded-xl border border-dashed"
+                          style={{ borderColor: "var(--border)", minHeight: 60 }}>
+                          <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                            {isOver ? "Drop here" : "Empty"}
+                          </p>
                         </div>
-                      );
-                    })}
+                      )}
+                      {stageLeads.map(lead => {
+                        const mao = lead.arv && lead.repair_est ? Math.round(lead.arv * 0.7 - lead.repair_est) : null;
+                        const spread = mao && lead.ask_price ? mao - lead.ask_price : null;
+                        return (
+                          <div key={lead.id} draggable
+                            onDragStart={() => onDragStart(lead.id, "kanban")}
+                            onDragEnd={onDragEnd}
+                            onClick={() => router.push(`/leads/${lead.id}`)}
+                            className="rounded-xl border p-3 cursor-pointer transition-all group"
+                            style={{
+                              background: "var(--surface-2)",
+                              borderColor: dragging === lead.id ? stage.color : "var(--border)",
+                              opacity: dragging === lead.id ? 0.4 : 1,
+                              borderLeftWidth: 3, borderLeftColor: stage.color,
+                            }}>
+                            <div className="flex items-start gap-1.5 mb-1.5">
+                              <MapPin size={11} className="flex-shrink-0 mt-0.5" style={{ color: stage.color }} />
+                              <p className="text-xs font-bold leading-snug">{lead.address}</p>
+                            </div>
+                            {lead.owner_name && (
+                              <p className="text-xs mb-1.5 pl-4" style={{ color: "var(--muted-foreground)" }}>{lead.owner_name}</p>
+                            )}
+                            <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: "var(--border)" }}>
+                              {lead.ask_price
+                                ? <span className="text-xs font-bold">{fmt(lead.ask_price)}</span>
+                                : <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>No price</span>}
+                              {spread !== null && (
+                                <span className="text-xs font-bold px-1.5 py-0.5 rounded-full"
+                                  style={{ background: spread > 0 ? "var(--invicta-green)20" : "var(--invicta-red)20", color: spread > 0 ? "var(--invicta-green)" : "var(--invicta-red)" }}>
+                                  {spread > 0 ? "+" : ""}{fmt(spread)}
+                                </span>
+                              )}
+                            </div>
+                            <button onClick={e => { e.stopPropagation(); releaseLead(lead.id); }}
+                              className="mt-2 w-full flex items-center justify-center gap-1 py-1 rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                              style={{ background: "var(--surface-3)", color: "var(--muted-foreground)" }}>
+                              <RotateCcw size={10} /> Release
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
