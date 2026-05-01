@@ -186,7 +186,8 @@ export default function PipelinePage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-128px)] md:h-screen overflow-hidden">
+    <div className="fixed top-14 md:top-0 bottom-[72px] md:bottom-0 left-0 md:left-[220px] right-0 flex flex-col overflow-hidden"
+      style={{ background: "var(--background)" }}>
 
       {/* ── MOBILE: Tab + List ── */}
       <div className="flex flex-col flex-1 md:hidden overflow-hidden">
