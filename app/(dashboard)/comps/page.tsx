@@ -67,7 +67,7 @@ function CompsContent() {
       const json = await res.json();
 
       if (!res.ok) {
-        setError(json.error ?? "Failed to fetch comps");
+        setError(`${json.error ?? "Failed to fetch comps"} — ${json.detail ?? ""}`);
         setLoading(false);
         setSearched(true);
         return;
