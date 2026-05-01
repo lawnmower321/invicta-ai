@@ -54,6 +54,7 @@ export default function ScraperPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [lastRun, setLastRun] = useState("Today at 9:14 AM");
   const [added, setAdded] = useState<Set<string>>(new Set());
+  const [failed, setFailed] = useState<Set<string>>(new Set());
 
   function toggleRun() {
     if (running) {
@@ -95,7 +96,10 @@ export default function ScraperPage() {
       stage: "new",
       assigned_to: null,
     });
-    if (!error) {
+    if (error) {
+      console.error("Scraper insert error:", error.message, error.code);
+      setFailed(prev => new Set(prev).add(lead.id));
+    } else {
       setAdded(prev => new Set(prev).add(lead.id));
       setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: "contacted" } : l));
     }
@@ -238,16 +242,14 @@ export default function ScraperPage() {
               </div>
               <div className="flex flex-col gap-1.5 flex-shrink-0">
                 <button
-                  onClick={() => !added.has(lead.id) && sendToPipeline(lead)}
+                  onClick={() => !added.has(lead.id) && !failed.has(lead.id) && sendToPipeline(lead)}
                   disabled={added.has(lead.id)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
                   style={{
-                    background: added.has(lead.id) ? "var(--invicta-green)30" : "var(--invicta-green)20",
-                    color: "var(--invicta-green)",
-                    opacity: added.has(lead.id) ? 1 : undefined,
+                    background: failed.has(lead.id) ? "var(--invicta-red)20" : added.has(lead.id) ? "var(--invicta-green)30" : "var(--invicta-green)20",
+                    color: failed.has(lead.id) ? "var(--invicta-red)" : "var(--invicta-green)",
                   }}>
-                  {added.has(lead.id) ? <Check size={11} /> : <ArrowUpRight size={11} />}
-                  {added.has(lead.id) ? "Added" : "Pipeline"}
+                  {failed.has(lead.id) ? "Error" : added.has(lead.id) ? <><Check size={11} />Added</> : <><ArrowUpRight size={11} />Pipeline</>}
                 </button>
                 {lead.status !== "skipped" && (
                   <button onClick={() => markStatus(lead.id, "skipped")}
