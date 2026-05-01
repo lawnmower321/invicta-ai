@@ -4,8 +4,9 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import {
-  Plus, MapPin, DollarSign, User, ArrowUpRight,
-  TrendingUp, X, RotateCcw, Loader2, Inbox, ExternalLink,
+  Plus, MapPin, User, ArrowUpRight,
+  X, RotateCcw, Loader2, Inbox, ExternalLink,
+  Pencil, Check, Trash2,
 } from "lucide-react";
 
 const supabase = createClient();
@@ -43,6 +44,8 @@ export default function PipelinePage() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [quickLead, setQuickLead] = useState<Lead | null>(null);
+  const [poolEditMode, setPoolEditMode] = useState(false);
+  const [pendingDeletes, setPendingDeletes] = useState<Map<string, { lead: Lead; timerId: ReturnType<typeof setTimeout> }>>(new Map());
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -74,6 +77,21 @@ export default function PipelinePage() {
     if (error) console.error("fetchLeads error:", error.message, error.code);
     setLeads(data ?? []);
     setLoading(false);
+  }
+
+  function deletePoolLead(lead: Lead) {
+    const timerId = setTimeout(async () => {
+      await supabase.from("leads").delete().eq("id", lead.id);
+      setPendingDeletes(prev => { const n = new Map(prev); n.delete(lead.id); return n; });
+    }, 5000);
+    setPendingDeletes(prev => new Map(prev).set(lead.id, { lead, timerId }));
+  }
+
+  function undoDelete(leadId: string) {
+    const entry = pendingDeletes.get(leadId);
+    if (!entry) return;
+    clearTimeout(entry.timerId);
+    setPendingDeletes(prev => { const n = new Map(prev); n.delete(leadId); return n; });
   }
 
   async function claimLead(leadId: string, stage: string) {
@@ -215,14 +233,28 @@ export default function PipelinePage() {
 
         {/* pool sub-header */}
         {mobileTab === "pool" && (
-          <div className="px-4 py-2.5 border-b flex-shrink-0 flex items-center justify-between"
+          <div className="px-4 py-2.5 border-b flex-shrink-0 flex items-center justify-between gap-2"
             style={{ borderColor: "var(--border)" }}>
-            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Tap a lead to claim or view</p>
-            <button onClick={() => setShowModal(true)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold"
-              style={{ background: "var(--invicta-blue)20", color: "var(--invicta-blue)" }}>
-              <Plus size={11} /> Add
-            </button>
+            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+              {poolEditMode ? "Tap trash to remove" : "Tap to claim or view"}
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setPoolEditMode(e => !e)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold"
+                style={{
+                  background: poolEditMode ? "var(--invicta-red)20" : "var(--surface-3)",
+                  color: poolEditMode ? "var(--invicta-red)" : "var(--muted-foreground)",
+                }}>
+                {poolEditMode ? <><Check size={11} />Done</> : <><Pencil size={11} />Edit</>}
+              </button>
+              {!poolEditMode && (
+                <button onClick={() => setShowModal(true)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold"
+                  style={{ background: "var(--invicta-blue)20", color: "var(--invicta-blue)" }}>
+                  <Plus size={11} /> Add
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -235,27 +267,57 @@ export default function PipelinePage() {
                 <Inbox size={28} className="opacity-30" />
                 <p className="text-xs text-center">Pool is empty — run the scraper or add leads</p>
               </div>
-            : pool.map(lead => (
-                <div key={lead.id} onClick={() => setQuickLead(lead)}
-                  className="rounded-xl border p-4 cursor-pointer active:opacity-60 transition-opacity"
-                  style={{ background: "var(--surface)", borderColor: "var(--border)", borderLeftWidth: 3, borderLeftColor: "var(--invicta-blue)" }}>
-                  <div className="flex items-start gap-2 mb-2">
-                    <MapPin size={12} className="flex-shrink-0 mt-0.5" style={{ color: "var(--invicta-blue)" }} />
-                    <p className="text-sm font-bold leading-snug">{lead.address}</p>
+            : <>
+                {Array.from(pendingDeletes.values()).map(({ lead }) => (
+                  <div key={lead.id} className="rounded-xl border p-3 flex items-center justify-between gap-2"
+                    style={{ background: "var(--invicta-red)10", borderColor: "var(--invicta-red)40" }}>
+                    <p className="text-xs truncate flex-1" style={{ color: "var(--muted-foreground)" }}>
+                      Deleting — {lead.address.split(",")[0]}
+                    </p>
+                    <button onClick={() => undoDelete(lead.id)}
+                      className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0"
+                      style={{ background: "var(--invicta-red)20", color: "var(--invicta-red)" }}>
+                      Undo
+                    </button>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs px-2 py-0.5 rounded-full font-bold"
-                      style={{ background: "var(--surface-3)", color: "var(--muted-foreground)" }}>
-                      {lead.source}
-                    </span>
-                    {lead.ask_price && (
-                      <span className="text-sm font-bold" style={{ color: "var(--invicta-amber)" }}>
-                        {fmt(lead.ask_price)}
+                ))}
+                {pool.filter(l => !pendingDeletes.has(l.id)).map(lead => (
+                  <div key={lead.id}
+                    onClick={() => !poolEditMode && setQuickLead(lead)}
+                    className="rounded-xl border p-4 transition-opacity"
+                    style={{
+                      background: "var(--surface)",
+                      borderColor: poolEditMode ? "var(--invicta-red)30" : "var(--border)",
+                      borderLeftWidth: 3,
+                      borderLeftColor: poolEditMode ? "var(--invicta-red)" : "var(--invicta-blue)",
+                      cursor: poolEditMode ? "default" : "pointer",
+                    }}>
+                    <div className="flex items-start gap-2 mb-2">
+                      <MapPin size={12} className="flex-shrink-0 mt-0.5"
+                        style={{ color: poolEditMode ? "var(--invicta-red)" : "var(--invicta-blue)" }} />
+                      <p className="text-sm font-bold leading-snug flex-1">{lead.address}</p>
+                      {poolEditMode && (
+                        <button onClick={() => deletePoolLead(lead)}
+                          className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center"
+                          style={{ background: "var(--invicta-red)20" }}>
+                          <Trash2 size={13} style={{ color: "var(--invicta-red)" }} />
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs px-2 py-0.5 rounded-full font-bold"
+                        style={{ background: "var(--surface-3)", color: "var(--muted-foreground)" }}>
+                        {lead.source}
                       </span>
-                    )}
+                      {lead.ask_price && (
+                        <span className="text-sm font-bold" style={{ color: "var(--invicta-amber)" }}>
+                          {fmt(lead.ask_price)}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </>
           )}
 
           {/* kanban stage cards */}
@@ -319,20 +381,30 @@ export default function PipelinePage() {
               <div className="flex items-center gap-2">
                 <Inbox size={15} style={{ color: "var(--invicta-blue)" }} />
                 <span className="font-bold text-sm tracking-wide">Lead Pool</span>
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                  style={{ background: "var(--invicta-blue)20", color: "var(--invicta-blue)" }}>
+                  {pool.length}
+                </span>
               </div>
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full"
-                style={{ background: "var(--invicta-blue)20", color: "var(--invicta-blue)" }}>
-                {pool.length}
-              </span>
+              <button onClick={() => setPoolEditMode(e => !e)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all"
+                style={{
+                  background: poolEditMode ? "var(--invicta-red)20" : "var(--surface-3)",
+                  color: poolEditMode ? "var(--invicta-red)" : "var(--muted-foreground)",
+                }}>
+                {poolEditMode ? <><Check size={11} />Done</> : <><Pencil size={11} />Edit</>}
+              </button>
             </div>
             <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-              Drag into pipeline to claim · click to preview
+              {poolEditMode ? "Tap the trash icon to remove a lead" : "Drag into pipeline to claim · click to preview"}
             </p>
-            <button onClick={() => setShowModal(true)}
-              className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-xl font-bold text-xs transition-all hover:opacity-90"
-              style={{ background: "var(--invicta-blue)20", color: "var(--invicta-blue)", border: "1px dashed var(--invicta-blue)50" }}>
-              <Plus size={13} /> Add to Pool
-            </button>
+            {!poolEditMode && (
+              <button onClick={() => setShowModal(true)}
+                className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-xl font-bold text-xs transition-all hover:opacity-90"
+                style={{ background: "var(--invicta-blue)20", color: "var(--invicta-blue)", border: "1px dashed var(--invicta-blue)50" }}>
+                <Plus size={13} /> Add to Pool
+              </button>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
@@ -342,21 +414,45 @@ export default function PipelinePage() {
                 <p className="text-xs text-center">Pool is empty — add leads or run the scraper</p>
               </div>
             )}
-            {pool.map(lead => (
-              <div key={lead.id} draggable
-                onDragStart={() => onDragStart(lead.id, "pool")}
+            {/* undo toasts */}
+            {Array.from(pendingDeletes.values()).map(({ lead }) => (
+              <div key={lead.id} className="rounded-xl border p-3 flex items-center justify-between gap-2"
+                style={{ background: "var(--invicta-red)10", borderColor: "var(--invicta-red)40" }}>
+                <p className="text-xs truncate flex-1" style={{ color: "var(--muted-foreground)" }}>
+                  Deleting — {lead.address.split(",")[0]}
+                </p>
+                <button onClick={() => undoDelete(lead.id)}
+                  className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0"
+                  style={{ background: "var(--invicta-red)20", color: "var(--invicta-red)" }}>
+                  Undo
+                </button>
+              </div>
+            ))}
+
+            {pool.filter(l => !pendingDeletes.has(l.id)).map(lead => (
+              <div key={lead.id} draggable={!poolEditMode}
+                onDragStart={() => !poolEditMode && onDragStart(lead.id, "pool")}
                 onDragEnd={onDragEnd}
-                onClick={() => setQuickLead(lead)}
-                className="rounded-xl border p-3 cursor-pointer transition-all"
+                onClick={() => !poolEditMode && setQuickLead(lead)}
+                className="rounded-xl border p-3 transition-all"
                 style={{
                   background: "var(--surface-2)",
-                  borderColor: dragging === lead.id ? "var(--invicta-blue)" : "var(--border)",
+                  borderColor: dragging === lead.id ? "var(--invicta-blue)" : poolEditMode ? "var(--invicta-red)30" : "var(--border)",
                   opacity: dragging === lead.id ? 0.4 : 1,
-                  borderLeftWidth: 3, borderLeftColor: "var(--invicta-blue)",
+                  borderLeftWidth: 3, borderLeftColor: poolEditMode ? "var(--invicta-red)" : "var(--invicta-blue)",
+                  cursor: poolEditMode ? "default" : "pointer",
                 }}>
                 <div className="flex items-start gap-1.5 mb-1.5">
-                  <MapPin size={11} className="flex-shrink-0 mt-0.5" style={{ color: "var(--invicta-blue)" }} />
-                  <p className="text-xs font-bold leading-snug">{lead.address}</p>
+                  <MapPin size={11} className="flex-shrink-0 mt-0.5"
+                    style={{ color: poolEditMode ? "var(--invicta-red)" : "var(--invicta-blue)" }} />
+                  <p className="text-xs font-bold leading-snug flex-1">{lead.address}</p>
+                  {poolEditMode && (
+                    <button onClick={() => deletePoolLead(lead)}
+                      className="flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center hover:opacity-70"
+                      style={{ background: "var(--invicta-red)20" }}>
+                      <Trash2 size={11} style={{ color: "var(--invicta-red)" }} />
+                    </button>
+                  )}
                 </div>
                 {lead.owner_name && (
                   <div className="flex items-center gap-1 mb-1.5">
