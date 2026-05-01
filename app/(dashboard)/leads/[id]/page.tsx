@@ -148,7 +148,7 @@ export default function LeadDetailPage() {
   const fmtDate = (s: string) => new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
   return (
-    <div className="p-8 max-w-[1100px]">
+    <div className="p-4 md:p-8 max-w-[1100px]">
       <button onClick={() => router.back()}
         className="flex items-center gap-2 text-sm font-bold mb-6 hover:opacity-60 transition-opacity"
         style={{ color: "var(--muted-foreground)" }}>
@@ -197,14 +197,14 @@ export default function LeadDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* left col */}
         <div className="col-span-2 flex flex-col gap-4">
 
           {/* deal numbers */}
           <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
             <h2 className="text-xs font-bold tracking-widest uppercase mb-4" style={{ color: "var(--muted-foreground)" }}>Deal Numbers</h2>
-            <div className="grid grid-cols-4 gap-3 mb-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
               {[
                 { label: "Ask Price",   value: lead.ask_price ? fmt(lead.ask_price) : "—",  color: "var(--invicta-amber)" },
                 { label: "Est. ARV",    value: lead.arv ? fmt(lead.arv) : "—",               color: "var(--invicta-blue)" },

@@ -75,7 +75,7 @@ export default function BuyersPage() {
   }
 
   return (
-    <div className="p-8 max-w-[1100px]">
+    <div className="p-4 md:p-8 max-w-[1100px]">
       {/* header */}
       <div className="flex items-end justify-between mb-8">
         <div>
@@ -118,7 +118,7 @@ export default function BuyersPage() {
       </div>
 
       {/* buyer grid */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filtered.map(buyer => (
           <button key={buyer.id} onClick={() => setSelected(buyer)}
             className="rounded-2xl border p-5 text-left transition-all hover:border-opacity-70 group"

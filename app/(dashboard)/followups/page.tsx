@@ -90,7 +90,7 @@ export default function FollowupsPage() {
   };
 
   return (
-    <div className="p-8 max-w-[800px]">
+    <div className="p-4 md:p-8 max-w-[800px]">
       {/* header */}
       <div className="flex items-end justify-between mb-8">
         <div>

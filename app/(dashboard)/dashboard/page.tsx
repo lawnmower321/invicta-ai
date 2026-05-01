@@ -56,7 +56,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="p-8 max-w-[1200px]">
+    <div className="p-4 md:p-8 max-w-[1200px]">
       {/* header */}
       <div className="mb-8">
         <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: "var(--muted-foreground)" }}>
@@ -67,7 +67,7 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {kpiCards.map(({ label, value, icon: Icon, accent }) => (
           <div key={label} className="rounded-2xl border p-4 flex items-center gap-4"
             style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
@@ -84,12 +84,12 @@ export default function DashboardPage() {
       </div>
 
       {/* bento grid */}
-      <div className="grid grid-cols-3 grid-rows-[auto_auto] gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
 
         {/* pipeline — large */}
         <Link href="/pipeline"
-          className="col-span-1 row-span-2 rounded-2xl border p-6 flex flex-col justify-between group transition-all hover:border-opacity-80 cursor-pointer"
-          style={{ background: "var(--surface)", borderColor: "var(--border)", minHeight: "260px" }}>
+          className="col-span-2 md:col-span-1 md:row-span-2 rounded-2xl border p-5 md:p-6 flex flex-col justify-between group transition-all hover:border-opacity-80 cursor-pointer"
+          style={{ background: "var(--surface)", borderColor: "var(--border)", minHeight: "160px" }}>
           <div>
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
               style={{ background: "var(--invicta-green)20" }}>

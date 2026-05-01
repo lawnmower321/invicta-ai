@@ -87,7 +87,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-8 max-w-[800px]">
+    <div className="p-4 md:p-8 max-w-[800px]">
       <div className="mb-8">
         <p className="text-xs font-bold tracking-widest uppercase mb-1"
           style={{ color: "var(--muted-foreground)" }}>
@@ -96,9 +96,9 @@ export default function SettingsPage() {
         <h1 className="text-3xl font-bold tracking-wide">Settings</h1>
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col md:flex-row gap-6">
         {/* sidebar nav */}
-        <div className="flex flex-col gap-1 w-44 flex-shrink-0">
+        <div className="flex flex-row md:flex-col gap-1 md:w-44 flex-shrink-0 overflow-x-auto">
           {TABS.map(({ id, label, icon: Icon }) => {
             const active = tab === id;
             return (

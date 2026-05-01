@@ -97,7 +97,7 @@ export default function ScraperPage() {
   const newCount = leads.filter(l => l.status === "new").length;
 
   return (
-    <div className="p-8 max-w-[1000px]">
+    <div className="p-4 md:p-8 max-w-[1000px]">
       {/* header */}
       <div className="flex items-end justify-between mb-8">
         <div>
@@ -118,7 +118,7 @@ export default function ScraperPage() {
       </div>
 
       {/* status bar */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {[
           { label: "New Leads",    value: newCount,                                  color: "var(--invicta-green)" },
           { label: "Contacted",    value: leads.filter(l => l.status === "contacted").length, color: "var(--invicta-amber)" },

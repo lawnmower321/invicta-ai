@@ -80,7 +80,7 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="p-8 max-w-[1100px]">
+    <div className="p-4 md:p-8 max-w-[1100px]">
       <div className="mb-8">
         <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: "var(--muted-foreground)" }}>Performance</p>
         <h1 className="text-3xl font-bold tracking-wide">Analytics</h1>
@@ -88,7 +88,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* team KPIs */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {[
           { label: "Pipeline Value",  value: totalPipelineValue > 0 ? fmt(totalPipelineValue) : "—", color: "var(--invicta-green)",  icon: DollarSign },
           { label: "Active Leads",    value: String(totalActive),                                     color: "var(--invicta-blue)",   icon: Target },
@@ -109,7 +109,7 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {/* per-user breakdown */}
         {userStats.length === 0 ? (
           <div className="col-span-2 rounded-2xl border p-10 flex flex-col items-center justify-center"

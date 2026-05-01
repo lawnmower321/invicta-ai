@@ -74,7 +74,7 @@ function CompsContent() {
   const suggestedArv = avgPrice ? Math.round(avgPrice * 0.97) : 0;
 
   return (
-    <div className="p-8 max-w-[1100px]">
+    <div className="p-4 md:p-8 max-w-[1100px]">
       {/* header */}
       <div className="mb-8">
         <p className="text-xs font-bold tracking-widest uppercase mb-1"
@@ -138,7 +138,7 @@ function CompsContent() {
       {searched && comps.length > 0 && (
         <>
           {/* ARV summary */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
             {[
               { label: "Suggested ARV",    value: fmt(suggestedArv),  color: "var(--invicta-green)",  accent: true },
               { label: "Avg Sale Price",   value: fmt(avgPrice),       color: "var(--invicta-blue)" },

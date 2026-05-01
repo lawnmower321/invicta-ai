@@ -110,7 +110,7 @@ function CalculatorContent() {
   const good = askN > 0 && mao > askN;
 
   return (
-    <div className="p-8 max-w-[900px]">
+    <div className="p-4 md:p-8 max-w-[900px]">
       <div className="mb-8">
         <p className="text-xs font-bold tracking-widest uppercase mb-1"
           style={{ color: "var(--muted-foreground)" }}>
@@ -122,7 +122,7 @@ function CalculatorContent() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
         {/* inputs */}
         <div className="flex flex-col gap-5">
