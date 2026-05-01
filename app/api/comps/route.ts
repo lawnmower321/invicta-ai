@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   const apiKey = process.env.RENTCAST_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "RENTCAST_API_KEY not set" }, { status: 500 });
 
-  const url = `https://api.rentcast.io/v1/avm/sale?address=${encodeURIComponent(address)}&maxRadius=${radius}&compCount=10`;
+  const url = `https://api.rentcast.io/v1/avm/value?address=${encodeURIComponent(address)}&maxRadius=${radius}&compCount=10`;
   console.log("Rentcast URL:", url);
 
   const res = await fetch(url, { headers: { "X-Api-Key": apiKey, "Accept": "application/json" } });
