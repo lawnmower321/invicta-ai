@@ -46,7 +46,8 @@ Respond with ONLY valid JSON, no markdown:
       messages: [{ role: "user", content: prompt }],
     });
 
-    const text = message.content[0].type === "text" ? message.content[0].text.trim() : "{}";
+    const raw = message.content[0].type === "text" ? message.content[0].text.trim() : "{}";
+    const text = raw.replace(/^```[a-z]*\n?/i, "").replace(/```$/i, "").trim();
     const result = JSON.parse(text);
     return NextResponse.json(result);
   } catch (e: any) {

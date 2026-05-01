@@ -35,7 +35,8 @@ Priority must be exactly: "high" (8-10), "medium" (5-7), "low" (1-4)`;
       messages: [{ role: "user", content: prompt }],
     });
 
-    const text = message.content[0].type === "text" ? message.content[0].text.trim() : "[]";
+    const raw = message.content[0].type === "text" ? message.content[0].text.trim() : "[]";
+    const text = raw.replace(/^```[a-z]*\n?/i, "").replace(/```$/i, "").trim();
     const scored = JSON.parse(text);
     return NextResponse.json(scored);
   } catch (e: any) {
