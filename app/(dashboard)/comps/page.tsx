@@ -6,6 +6,7 @@ import {
   Search, MapPin, TrendingUp, Home, Calendar,
   Ruler, ArrowUpRight, RefreshCw, Info,
 } from "lucide-react";
+import PageShell from "@/components/PageShell";
 
 type Comp = {
   id: string;
@@ -74,19 +75,8 @@ function CompsContent() {
   const suggestedArv = avgPrice ? Math.round(avgPrice * 0.97) : 0;
 
   return (
-    <div className="p-4 md:p-8 max-w-[1100px]">
-      {/* header */}
-      <div className="mb-8">
-        <p className="text-xs font-bold tracking-widest uppercase mb-1"
-          style={{ color: "var(--muted-foreground)" }}>
-          Market Analysis
-        </p>
-        <h1 className="text-3xl font-bold tracking-wide">Comps Tool</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>
-          Pull comparable sales to estimate ARV instantly
-        </p>
-      </div>
-
+    <PageShell title="Comps Tool" subtitle="Pull comparable sales">
+      <div>
       {/* search bar */}
       <div className="rounded-2xl border p-5 mb-6" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
         <div className="flex gap-3 flex-wrap">
@@ -219,7 +209,8 @@ function CompsContent() {
           </p>
         </div>
       )}
-    </div>
+      </div>
+    </PageShell>
   );
 }
 

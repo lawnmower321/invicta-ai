@@ -6,6 +6,7 @@ import {
   ExternalLink, Filter, ChevronDown, Zap, Database,
   ArrowUpRight, AlertCircle, Check,
 } from "lucide-react";
+import PageShell from "@/components/PageShell";
 
 type Lead = {
   id: string;
@@ -97,26 +98,18 @@ export default function ScraperPage() {
   const newCount = leads.filter(l => l.status === "new").length;
 
   return (
-    <div className="p-4 md:p-8 max-w-[1000px]">
-      {/* header */}
-      <div className="flex items-end justify-between mb-8">
-        <div>
-          <p className="text-xs font-bold tracking-widest uppercase mb-1"
-            style={{ color: "var(--muted-foreground)" }}>
-            Lead Generation
-          </p>
-          <h1 className="text-3xl font-bold tracking-wide">Scraper</h1>
-          <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>
-            Auto-finds motivated sellers from public sources
-          </p>
-        </div>
+    <PageShell
+      title="Scraper"
+      subtitle="Find motivated sellers"
+      action={
         <button onClick={toggleRun}
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all hover:opacity-90"
           style={{ background: running ? "var(--invicta-red)" : "var(--invicta-green)", color: "#000" }}>
           {running ? <><Pause size={15} />Stop Scraper</> : <><Play size={15} />Run Scraper</>}
         </button>
-      </div>
-
+      }
+    >
+      <div>
       {/* status bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {[
@@ -248,6 +241,7 @@ export default function ScraperPage() {
           );
         })}
       </div>
-    </div>
+      </div>
+    </PageShell>
   );
 }

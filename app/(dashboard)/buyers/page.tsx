@@ -5,6 +5,7 @@ import {
   Plus, Search, Users, Phone, Mail, MapPin,
   DollarSign, Home, Tag, X, CheckCircle2,
 } from "lucide-react";
+import PageShell from "@/components/PageShell";
 
 type Buyer = {
   id: string;
@@ -75,27 +76,19 @@ export default function BuyersPage() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-[1100px]">
-      {/* header */}
-      <div className="flex items-end justify-between mb-8">
-        <div>
-          <p className="text-xs font-bold tracking-widest uppercase mb-1"
-            style={{ color: "var(--muted-foreground)" }}>
-            Buyer Network
-          </p>
-          <h1 className="text-3xl font-bold tracking-wide">Cash Buyers</h1>
-          <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>
-            {buyers.length} buyers in your network
-          </p>
-        </div>
+    <PageShell
+      title="Cash Buyers"
+      subtitle={`${buyers.length} in network`}
+      action={
         <button onClick={() => setShowModal(true)}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all hover:opacity-90"
           style={{ background: "var(--invicta-blue)", color: "#fff" }}>
           <Plus size={16} />
           Add Buyer
         </button>
-      </div>
-
+      }
+    >
+      <div>
       {/* search */}
       <div className="relative mb-5">
         <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2"
@@ -307,6 +300,7 @@ export default function BuyersPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </PageShell>
   );
 }

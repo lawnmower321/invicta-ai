@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { DollarSign, TrendingUp, Users, Target, Zap, Clock, Loader2 } from "lucide-react";
+import PageShell from "@/components/PageShell";
 
 const supabase = createClient();
 
@@ -80,13 +81,8 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-[1100px]">
-      <div className="mb-8">
-        <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: "var(--muted-foreground)" }}>Performance</p>
-        <h1 className="text-3xl font-bold tracking-wide">Analytics</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>Live data from your pipeline</p>
-      </div>
-
+    <PageShell title="Analytics" subtitle="Live from your pipeline">
+      <div>
       {/* team KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {[
@@ -215,6 +211,7 @@ export default function AnalyticsPage() {
           })}
         </div>
       </div>
-    </div>
+      </div>
+    </PageShell>
   );
 }

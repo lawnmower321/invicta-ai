@@ -5,6 +5,7 @@ import {
   User, Bell, Map, Key, Save, Check,
   Shield, Globe, DollarSign,
 } from "lucide-react";
+import PageShell from "@/components/PageShell";
 
 type Tab = "profile" | "markets" | "notifications" | "integrations";
 
@@ -87,15 +88,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-[800px]">
-      <div className="mb-8">
-        <p className="text-xs font-bold tracking-widest uppercase mb-1"
-          style={{ color: "var(--muted-foreground)" }}>
-          Configuration
-        </p>
-        <h1 className="text-3xl font-bold tracking-wide">Settings</h1>
-      </div>
-
+    <PageShell title="Settings">
+      <div>
       <div className="flex flex-col md:flex-row gap-6">
         {/* sidebar nav */}
         <div className="flex flex-row md:flex-col gap-1 md:w-44 flex-shrink-0 overflow-x-auto">
@@ -249,6 +243,7 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </PageShell>
   );
 }

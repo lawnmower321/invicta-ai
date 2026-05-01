@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import {
-  ArrowLeft, MapPin, User, Phone, Mail, DollarSign,
+  MapPin, User, Phone, Mail, DollarSign,
   TrendingUp, Calculator, CheckCircle2, Circle,
   Plus, Pencil, Save, X, Loader2, ChevronDown,
 } from "lucide-react";
+import PageShell from "@/components/PageShell";
 
 const supabase = createClient();
 
@@ -132,12 +133,9 @@ export default function LeadDetailPage() {
 
   if (!lead) {
     return (
-      <div className="p-8">
-        <button onClick={() => router.back()} className="flex items-center gap-2 mb-4 hover:opacity-60" style={{ color: "var(--muted-foreground)" }}>
-          <ArrowLeft size={15} /> Back
-        </button>
-        <p>Lead not found.</p>
-      </div>
+      <PageShell title="Lead Not Found" back>
+        <p>This lead could not be found.</p>
+      </PageShell>
     );
   }
 
@@ -147,56 +145,38 @@ export default function LeadDetailPage() {
 
   const fmtDate = (s: string) => new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-  return (
-    <div className="p-4 md:p-8 max-w-[1100px]">
-      <button onClick={() => router.back()}
-        className="flex items-center gap-2 text-sm font-bold mb-6 hover:opacity-60 transition-opacity"
-        style={{ color: "var(--muted-foreground)" }}>
-        <ArrowLeft size={15} /> Back to Pipeline
+  const stageAction = (
+    <div className="relative">
+      <button onClick={() => setStageOpen(o => !o)}
+        className="flex items-center gap-2 px-3 py-2 rounded-xl border font-bold text-sm"
+        style={{ background: `${color}15`, borderColor: color, color }}>
+        <div className="w-2 h-2 rounded-full" style={{ background: color }} />
+        {STAGE_LABELS[lead.stage] ?? lead.stage}
+        <ChevronDown size={14} style={{ transform: stageOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
       </button>
-
-      {/* header */}
-      <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <MapPin size={15} style={{ color }} />
-            <h1 className="text-2xl font-bold tracking-wide">{lead.address}</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            {lead.owner_name && (
-              <><User size={13} style={{ color: "var(--muted-foreground)" }} />
-              <span className="text-sm" style={{ color: "var(--muted-foreground)" }}>{lead.owner_name}</span></>
-            )}
-            <span className="text-xs px-2 py-0.5 rounded-full font-bold"
-              style={{ background: `${color}20`, color }}>{lead.source}</span>
-          </div>
+      {stageOpen && (
+        <div className="absolute right-0 top-full mt-1 z-20 rounded-xl border overflow-hidden"
+          style={{ background: "var(--card)", borderColor: "var(--border)", minWidth: 180 }}>
+          {STAGES.map(s => (
+            <button key={s} onClick={() => updateStage(s)}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold text-left hover:opacity-70"
+              style={{ color: STAGE_COLORS[STAGE_IDS[s]] }}>
+              <div className="w-1.5 h-1.5 rounded-full" style={{ background: STAGE_COLORS[STAGE_IDS[s]] }} />
+              {s}
+            </button>
+          ))}
         </div>
+      )}
+    </div>
+  );
 
-        {/* stage selector */}
-        <div className="relative">
-          <button onClick={() => setStageOpen(o => !o)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border font-bold text-sm"
-            style={{ background: `${color}15`, borderColor: color, color }}>
-            <div className="w-2 h-2 rounded-full" style={{ background: color }} />
-            {STAGE_LABELS[lead.stage] ?? lead.stage}
-            <ChevronDown size={14} style={{ transform: stageOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
-          </button>
-          {stageOpen && (
-            <div className="absolute right-0 top-full mt-1 z-20 rounded-xl border overflow-hidden"
-              style={{ background: "var(--card)", borderColor: "var(--border)", minWidth: 180 }}>
-              {STAGES.map(s => (
-                <button key={s} onClick={() => updateStage(s)}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold text-left hover:opacity-70"
-                  style={{ color: STAGE_COLORS[STAGE_IDS[s]] }}>
-                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: STAGE_COLORS[STAGE_IDS[s]] }} />
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
+  return (
+    <PageShell
+      title={lead.address}
+      subtitle={lead.owner_name ?? lead.source}
+      back
+      action={stageAction}
+    >
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* left col */}
         <div className="col-span-2 flex flex-col gap-4">
@@ -371,6 +351,6 @@ export default function LeadDetailPage() {
           </div>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

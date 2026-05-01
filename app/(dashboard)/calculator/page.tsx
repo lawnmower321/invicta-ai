@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Calculator, TrendingUp, DollarSign, Wrench, ArrowRight, Info } from "lucide-react";
+import PageShell from "@/components/PageShell";
 
 function fmt(n: number) {
   return isNaN(n) || !isFinite(n) ? "—" : "$" + Math.round(n).toLocaleString();
@@ -110,18 +111,8 @@ function CalculatorContent() {
   const good = askN > 0 && mao > askN;
 
   return (
-    <div className="p-4 md:p-8 max-w-[900px]">
-      <div className="mb-8">
-        <p className="text-xs font-bold tracking-widest uppercase mb-1"
-          style={{ color: "var(--muted-foreground)" }}>
-          Wholesale Math
-        </p>
-        <h1 className="text-3xl font-bold tracking-wide">Deal Calculator</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>
-          MAO · assignment fee · ROI — all in one place
-        </p>
-      </div>
-
+    <PageShell title="Calculator" subtitle="MAO & assignment fee">
+      <div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
         {/* inputs */}
@@ -253,7 +244,8 @@ function CalculatorContent() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </PageShell>
   );
 }
 

@@ -5,6 +5,7 @@ import {
   Bell, CheckCircle2, Circle, Plus, MapPin,
   Clock, AlertCircle, Calendar, X,
 } from "lucide-react";
+import PageShell from "@/components/PageShell";
 
 type Task = {
   id: string;
@@ -90,23 +91,17 @@ export default function FollowupsPage() {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-[800px]">
-      {/* header */}
-      <div className="flex items-end justify-between mb-8">
-        <div>
-          <p className="text-xs font-bold tracking-widest uppercase mb-1"
-            style={{ color: "var(--muted-foreground)" }}>
-            Task Management
-          </p>
-          <h1 className="text-3xl font-bold tracking-wide">Follow-ups</h1>
-        </div>
+    <PageShell
+      title="Follow-ups"
+      subtitle="Tasks & reminders"
+      action={
         <button onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all hover:opacity-90"
+          className="flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-sm"
           style={{ background: "var(--invicta-amber)", color: "#000" }}>
-          <Plus size={16} />
-          Add Task
+          <Plus size={14} /> Add
         </button>
-      </div>
+      }>
+    <div>
 
       {/* filter tabs */}
       <div className="flex gap-2 mb-6 flex-wrap">
@@ -272,5 +267,6 @@ export default function FollowupsPage() {
         </div>
       )}
     </div>
+    </PageShell>
   );
 }
