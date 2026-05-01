@@ -3,10 +3,12 @@
 import { useState } from "react";
 import {
   Radio, Play, Pause, RefreshCw, MapPin, DollarSign,
-  ExternalLink, Filter, ChevronDown, Zap, Database,
-  ArrowUpRight, AlertCircle, Check,
+  Filter, ArrowUpRight, Check,
 } from "lucide-react";
 import PageShell from "@/components/PageShell";
+import { createClient } from "@/utils/supabase/client";
+
+const supabase = createClient();
 
 type Lead = {
   id: string;
@@ -51,6 +53,7 @@ export default function ScraperPage() {
   const [source, setSource] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [lastRun, setLastRun] = useState("Today at 9:14 AM");
+  const [added, setAdded] = useState<Set<string>>(new Set());
 
   function toggleRun() {
     if (running) {
@@ -82,9 +85,20 @@ export default function ScraperPage() {
     setLeads(prev => prev.map(l => l.id === id ? { ...l, status } : l));
   }
 
-  function sendToPipeline(lead: Lead) {
-    setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: "contacted" } : l));
-    alert(`"${lead.address}" added to Pipeline as a new lead.`);
+  async function sendToPipeline(lead: Lead) {
+    const fullAddress = `${lead.address}, ${lead.city} ${lead.state} ${lead.zip}`;
+    const { error } = await supabase.from("leads").insert({
+      address: fullAddress,
+      source: lead.source,
+      ask_price: lead.listPrice,
+      notes: lead.notes,
+      stage: "new",
+      assigned_to: null,
+    });
+    if (!error) {
+      setAdded(prev => new Set(prev).add(lead.id));
+      setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: "contacted" } : l));
+    }
   }
 
   const sources = ["all", ...Array.from(new Set(MOCK_LEADS.map(l => l.source)))];
@@ -223,11 +237,17 @@ export default function ScraperPage() {
                 <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{lead.notes}</p>
               </div>
               <div className="flex flex-col gap-1.5 flex-shrink-0">
-                <button onClick={() => sendToPipeline(lead)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-opacity hover:opacity-80"
-                  style={{ background: "var(--invicta-green)20", color: "var(--invicta-green)" }}>
-                  <ArrowUpRight size={11} />
-                  Pipeline
+                <button
+                  onClick={() => !added.has(lead.id) && sendToPipeline(lead)}
+                  disabled={added.has(lead.id)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                  style={{
+                    background: added.has(lead.id) ? "var(--invicta-green)30" : "var(--invicta-green)20",
+                    color: "var(--invicta-green)",
+                    opacity: added.has(lead.id) ? 1 : undefined,
+                  }}>
+                  {added.has(lead.id) ? <Check size={11} /> : <ArrowUpRight size={11} />}
+                  {added.has(lead.id) ? "Added" : "Pipeline"}
                 </button>
                 {lead.status !== "skipped" && (
                   <button onClick={() => markStatus(lead.id, "skipped")}
