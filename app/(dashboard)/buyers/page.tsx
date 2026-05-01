@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import {
   Plus, Search, Phone, Mail, MapPin,
-  DollarSign, CheckCircle2, X, Loader2,
+  DollarSign, CheckCircle2, X, Loader2, Trash2, Award,
 } from "lucide-react";
 import PageShell from "@/components/PageShell";
 import { createClient } from "@/utils/supabase/client";
@@ -51,9 +51,7 @@ export default function BuyersPage() {
 
   async function fetchBuyers() {
     const { data } = await supabase
-      .from("buyers")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .from("buyers").select("*").order("created_at", { ascending: false });
     setBuyers(data ?? []);
     setLoading(false);
   }
@@ -67,7 +65,7 @@ export default function BuyersPage() {
     if (!form.name.trim()) return;
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
-    await supabase.from("buyers").insert({
+    const { data } = await supabase.from("buyers").insert({
       name: form.name.trim(),
       phone: form.phone.trim() || null,
       email: form.email.trim() || null,
@@ -75,15 +73,35 @@ export default function BuyersPage() {
       min_price: form.min_price ? Number(form.min_price.replace(/\D/g, "")) : null,
       max_price: form.max_price ? Number(form.max_price.replace(/\D/g, "")) : null,
       prop_types: form.prop_types.split(",").map(s => s.trim()).filter(Boolean),
-      cash_proof: false,
-      deals_completed: 0,
+      cash_proof: false, deals_completed: 0,
       notes: form.notes.trim() || null,
       created_by: user?.id ?? null,
-    });
+    }).select().single();
+    if (data) setBuyers(prev => [data, ...prev]);
     setForm(EMPTY_FORM);
     setShowModal(false);
     setSaving(false);
-    fetchBuyers();
+  }
+
+  async function deleteBuyer(id: string) {
+    setBuyers(prev => prev.filter(b => b.id !== id));
+    setSelected(null);
+    await supabase.from("buyers").delete().eq("id", id);
+  }
+
+  async function toggleCashProof(buyer: Buyer) {
+    const updated = { ...buyer, cash_proof: !buyer.cash_proof };
+    setSelected(updated);
+    setBuyers(prev => prev.map(b => b.id === buyer.id ? updated : b));
+    await supabase.from("buyers").update({ cash_proof: !buyer.cash_proof }).eq("id", buyer.id);
+  }
+
+  async function updateDeals(buyer: Buyer, delta: number) {
+    const newCount = Math.max(0, buyer.deals_completed + delta);
+    const updated = { ...buyer, deals_completed: newCount };
+    setSelected(updated);
+    setBuyers(prev => prev.map(b => b.id === buyer.id ? updated : b));
+    await supabase.from("buyers").update({ deals_completed: newCount }).eq("id", buyer.id);
   }
 
   return (
@@ -92,16 +110,14 @@ export default function BuyersPage() {
       subtitle={loading ? "loading..." : `${buyers.length} in network`}
       action={
         <button onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all hover:opacity-90"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm hover:opacity-90"
           style={{ background: "var(--invicta-blue)", color: "#fff" }}>
           <Plus size={16} /> Add Buyer
         </button>
       }
     >
-      {/* search */}
       <div className="relative mb-5">
-        <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2"
-          style={{ color: "var(--muted-foreground)" }} />
+        <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }} />
         <input type="text" value={query} onChange={e => setQuery(e.target.value)}
           placeholder="Search buyers or markets..."
           className="w-full pl-11 pr-4 py-3 rounded-xl border text-sm outline-none transition-all"
@@ -118,12 +134,9 @@ export default function BuyersPage() {
       )}
 
       {!loading && buyers.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-24 rounded-2xl border border-dashed"
-          style={{ borderColor: "var(--border)" }}>
+        <div className="flex flex-col items-center justify-center py-24 rounded-2xl border border-dashed" style={{ borderColor: "var(--border)" }}>
           <p className="font-bold mb-1">No buyers yet</p>
-          <p className="text-sm mb-4" style={{ color: "var(--muted-foreground)" }}>
-            Add your first cash buyer to start building your network
-          </p>
+          <p className="text-sm mb-4" style={{ color: "var(--muted-foreground)" }}>Add your first cash buyer to start building your network</p>
           <button onClick={() => setShowModal(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm"
             style={{ background: "var(--invicta-blue)", color: "#fff" }}>
@@ -132,7 +145,6 @@ export default function BuyersPage() {
         </div>
       )}
 
-      {/* buyer grid */}
       {!loading && filtered.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filtered.map(buyer => (
@@ -146,9 +158,7 @@ export default function BuyersPage() {
                 </div>
                 <div>
                   <h3 className="font-bold">{buyer.name}</h3>
-                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                    {buyer.deals_completed} deals closed
-                  </p>
+                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{buyer.deals_completed} deals closed</p>
                 </div>
                 {buyer.cash_proof && (
                   <span className="ml-auto flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full"
@@ -194,36 +204,39 @@ export default function BuyersPage() {
             style={{ background: "var(--card)", borderColor: "var(--border)" }}>
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold">{selected.name}</h2>
-              <button onClick={() => setSelected(null)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center hover:opacity-60"
-                style={{ background: "var(--surface-3)" }}>
-                <X size={14} />
-              </button>
+              <div className="flex gap-2">
+                <button onClick={() => deleteBuyer(selected.id)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center hover:opacity-60"
+                  style={{ background: "var(--invicta-red)20" }}>
+                  <Trash2 size={13} style={{ color: "var(--invicta-red)" }} />
+                </button>
+                <button onClick={() => setSelected(null)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center hover:opacity-60"
+                  style={{ background: "var(--surface-3)" }}>
+                  <X size={14} />
+                </button>
+              </div>
             </div>
+
             <div className="flex flex-col gap-3">
               {selected.phone && (
-                <a href={`tel:${selected.phone}`}
-                  className="flex items-center gap-3 p-3 rounded-xl hover:opacity-70"
-                  style={{ background: "var(--surface-2)" }}>
+                <a href={`tel:${selected.phone}`} className="flex items-center gap-3 p-3 rounded-xl hover:opacity-70" style={{ background: "var(--surface-2)" }}>
                   <Phone size={14} style={{ color: "var(--invicta-green)" }} />{selected.phone}
                 </a>
               )}
               {selected.email && (
-                <a href={`mailto:${selected.email}`}
-                  className="flex items-center gap-3 p-3 rounded-xl hover:opacity-70"
-                  style={{ background: "var(--surface-2)" }}>
+                <a href={`mailto:${selected.email}`} className="flex items-center gap-3 p-3 rounded-xl hover:opacity-70" style={{ background: "var(--surface-2)" }}>
                   <Mail size={14} style={{ color: "var(--invicta-blue)" }} />{selected.email}
                 </a>
               )}
             </div>
+
             <div className="rounded-xl p-4" style={{ background: "var(--surface-2)" }}>
               <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: "var(--muted-foreground)" }}>Buy Box</p>
               <div className="flex flex-col gap-2 text-sm">
                 <div className="flex justify-between">
                   <span style={{ color: "var(--muted-foreground)" }}>Price Range</span>
-                  <span className="font-bold">
-                    {selected.min_price ? fmt(selected.min_price) : "—"} – {selected.max_price ? fmt(selected.max_price) : "—"}
-                  </span>
+                  <span className="font-bold">{selected.min_price ? fmt(selected.min_price) : "—"} – {selected.max_price ? fmt(selected.max_price) : "—"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span style={{ color: "var(--muted-foreground)" }}>Markets</span>
@@ -233,20 +246,36 @@ export default function BuyersPage() {
                   <span style={{ color: "var(--muted-foreground)" }}>Prop Types</span>
                   <span className="font-bold">{selected.prop_types.join(", ") || "—"}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span style={{ color: "var(--muted-foreground)" }}>Deals Closed</span>
-                  <span className="font-bold" style={{ color: "var(--invicta-green)" }}>{selected.deals_completed}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span style={{ color: "var(--muted-foreground)" }}>Cash Proof</span>
-                  {selected.cash_proof
-                    ? <span className="flex items-center gap-1 text-xs font-bold" style={{ color: "var(--invicta-green)" }}>
-                        <CheckCircle2 size={12} /> Verified
-                      </span>
-                    : <span className="text-xs" style={{ color: "var(--invicta-amber)" }}>Pending</span>}
-                </div>
               </div>
             </div>
+
+            {/* editable stats */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl p-4 flex flex-col items-center gap-2" style={{ background: "var(--surface-2)" }}>
+                <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted-foreground)" }}>Deals Closed</p>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => updateDeals(selected, -1)}
+                    className="w-7 h-7 rounded-lg font-bold text-lg flex items-center justify-center"
+                    style={{ background: "var(--surface-3)", color: "var(--muted-foreground)" }}>−</button>
+                  <span className="text-2xl font-bold" style={{ color: "var(--invicta-green)" }}>{selected.deals_completed}</span>
+                  <button onClick={() => updateDeals(selected, 1)}
+                    className="w-7 h-7 rounded-lg font-bold text-lg flex items-center justify-center"
+                    style={{ background: "var(--surface-3)", color: "var(--muted-foreground)" }}>+</button>
+                </div>
+              </div>
+              <div className="rounded-xl p-4 flex flex-col items-center gap-2" style={{ background: "var(--surface-2)" }}>
+                <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted-foreground)" }}>Cash Proof</p>
+                <button onClick={() => toggleCashProof(selected)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-bold text-sm transition-all"
+                  style={{
+                    background: selected.cash_proof ? "var(--invicta-green)20" : "var(--surface-3)",
+                    color: selected.cash_proof ? "var(--invicta-green)" : "var(--muted-foreground)",
+                  }}>
+                  {selected.cash_proof ? <><CheckCircle2 size={13} /> Verified</> : <><Award size={13} /> Mark Verified</>}
+                </button>
+              </div>
+            </div>
+
             {selected.notes && (
               <div>
                 <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: "var(--muted-foreground)" }}>Notes</p>
@@ -284,8 +313,7 @@ export default function BuyersPage() {
                 { key: "notes",      label: "Notes",                     placeholder: "Fast closer..." },
               ].map(({ key, label, placeholder }) => (
                 <div key={key} className="flex flex-col gap-1">
-                  <label className="text-xs font-bold tracking-wider uppercase"
-                    style={{ color: "var(--muted-foreground)" }}>{label}</label>
+                  <label className="text-xs font-bold tracking-wider uppercase" style={{ color: "var(--muted-foreground)" }}>{label}</label>
                   <input type="text" value={(form as any)[key]}
                     onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
                     placeholder={placeholder}
@@ -300,9 +328,7 @@ export default function BuyersPage() {
             <div className="flex gap-3 mt-5">
               <button onClick={() => setShowModal(false)}
                 className="flex-1 py-2.5 rounded-xl font-bold text-sm"
-                style={{ background: "var(--surface-3)", color: "var(--muted-foreground)" }}>
-                Cancel
-              </button>
+                style={{ background: "var(--surface-3)", color: "var(--muted-foreground)" }}>Cancel</button>
               <button onClick={addBuyer} disabled={saving}
                 className="flex-1 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2"
                 style={{ background: "var(--invicta-blue)", color: "#fff" }}>

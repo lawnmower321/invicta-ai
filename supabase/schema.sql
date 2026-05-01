@@ -83,6 +83,16 @@ create policy "leads_delete" on public.leads for delete to authenticated using (
 create policy "activity_select" on public.lead_activity for select to authenticated using (true);
 create policy "activity_insert" on public.lead_activity for insert to authenticated with check (auth.uid() = user_id);
 
+-- Extra profile fields (run as migration if profiles table already exists)
+alter table public.profiles add column if not exists partner_name text;
+alter table public.profiles add column if not exists phone text;
+alter table public.profiles add column if not exists company text;
+alter table public.profiles add column if not exists target_markets text;
+alter table public.profiles add column if not exists min_price bigint;
+alter table public.profiles add column if not exists max_price bigint;
+alter table public.profiles add column if not exists prop_types text;
+alter table public.profiles add column if not exists mao_factor int default 70;
+
 -- Cash Buyers
 create table public.buyers (
   id uuid default gen_random_uuid() primary key,

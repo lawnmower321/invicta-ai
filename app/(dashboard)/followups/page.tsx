@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import {
-  Bell, CheckCircle2, Circle, Plus, MapPin,
-  Clock, AlertCircle, X, Loader2,
+  CheckCircle2, Circle, Plus, MapPin,
+  Clock, AlertCircle, X, Loader2, Trash2,
 } from "lucide-react";
 import PageShell from "@/components/PageShell";
 import { createClient } from "@/utils/supabase/client";
@@ -51,17 +51,13 @@ export default function FollowupsPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUserId(data.user?.id ?? null);
-    });
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
     fetchTasks();
   }, []);
 
   async function fetchTasks() {
     const { data } = await supabase
-      .from("followups")
-      .select("*")
-      .order("due_date", { ascending: true });
+      .from("followups").select("*").order("due_date", { ascending: true });
     setTasks(data ?? []);
     setLoading(false);
   }
@@ -69,9 +65,13 @@ export default function FollowupsPage() {
   async function toggle(id: string) {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
-    const newDone = !task.done;
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, done: newDone } : t));
-    await supabase.from("followups").update({ done: newDone }).eq("id", id);
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+    await supabase.from("followups").update({ done: !task.done }).eq("id", id);
+  }
+
+  async function deleteTask(id: string) {
+    setTasks(prev => prev.filter(t => t.id !== id));
+    await supabase.from("followups").delete().eq("id", id);
   }
 
   async function addTask() {
@@ -85,7 +85,7 @@ export default function FollowupsPage() {
       done: false,
       user_id: userId,
     }).select().single();
-    if (data) setTasks(prev => [data, ...prev]);
+    if (data) setTasks(prev => [...prev, data].sort((a, b) => a.due_date.localeCompare(b.due_date)));
     setNewTask({ text: "", lead_label: "", due_date: todayStr, priority: "medium" });
     setShowModal(false);
     setSaving(false);
@@ -106,9 +106,7 @@ export default function FollowupsPage() {
   };
 
   return (
-    <PageShell
-      title="Follow-ups"
-      subtitle="Tasks & reminders"
+    <PageShell title="Follow-ups" subtitle="Tasks & reminders"
       action={
         <button onClick={() => setShowModal(true)}
           className="flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-sm"
@@ -147,7 +145,6 @@ export default function FollowupsPage() {
         </div>
       )}
 
-      {/* task list */}
       {!loading && (
         <div className="flex flex-col gap-2">
           {filtered.length === 0 && (
@@ -166,13 +163,13 @@ export default function FollowupsPage() {
             const today = isToday(task.due_date);
             return (
               <div key={task.id}
-                className="rounded-2xl border p-4 flex items-start gap-4 transition-all"
+                className="rounded-2xl border p-4 flex items-start gap-4 transition-all group"
                 style={{
                   background: "var(--surface)",
                   borderColor: overdue ? "var(--invicta-red)40" : "var(--border)",
                   opacity: task.done ? 0.5 : 1,
                 }}>
-                <button onClick={() => toggle(task.id)} className="mt-0.5 flex-shrink-0 transition-transform hover:scale-110">
+                <button onClick={() => toggle(task.id)} className="mt-0.5 flex-shrink-0 hover:scale-110 transition-transform">
                   {task.done
                     ? <CheckCircle2 size={18} style={{ color: "var(--invicta-green)" }} />
                     : <Circle size={18} style={{ color: "var(--muted-foreground)" }} />}
@@ -198,13 +195,17 @@ export default function FollowupsPage() {
                   style={{ background: pCfg.bg, color: pCfg.color }}>
                   {pCfg.label}
                 </span>
+                <button onClick={() => deleteTask(task.id)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center hover:opacity-60"
+                  style={{ background: "var(--surface-3)" }}>
+                  <Trash2 size={12} style={{ color: "var(--invicta-red)" }} />
+                </button>
               </div>
             );
           })}
         </div>
       )}
 
-      {/* add task modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center"
           style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
@@ -221,13 +222,11 @@ export default function FollowupsPage() {
             </div>
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold tracking-wider uppercase"
-                  style={{ color: "var(--muted-foreground)" }}>Task *</label>
+                <label className="text-xs font-bold tracking-wider uppercase" style={{ color: "var(--muted-foreground)" }}>Task *</label>
                 <input type="text" value={newTask.text}
                   onChange={e => setNewTask(n => ({ ...n, text: e.target.value }))}
                   onKeyDown={e => e.key === "Enter" && addTask()}
-                  placeholder="Call back seller..."
-                  autoFocus
+                  placeholder="Call back seller..." autoFocus
                   className="w-full px-4 py-3 rounded-xl border text-sm outline-none"
                   style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--foreground)", fontFamily: "inherit" }}
                   onFocus={e => (e.target.style.borderColor = "var(--invicta-amber)")}
@@ -235,8 +234,7 @@ export default function FollowupsPage() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold tracking-wider uppercase"
-                  style={{ color: "var(--muted-foreground)" }}>Lead / Property</label>
+                <label className="text-xs font-bold tracking-wider uppercase" style={{ color: "var(--muted-foreground)" }}>Lead / Property</label>
                 <input type="text" value={newTask.lead_label}
                   onChange={e => setNewTask(n => ({ ...n, lead_label: e.target.value }))}
                   placeholder="Address or leave blank for General"
@@ -248,8 +246,7 @@ export default function FollowupsPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold tracking-wider uppercase"
-                    style={{ color: "var(--muted-foreground)" }}>Due Date</label>
+                  <label className="text-xs font-bold tracking-wider uppercase" style={{ color: "var(--muted-foreground)" }}>Due Date</label>
                   <input type="date" value={newTask.due_date}
                     onChange={e => setNewTask(n => ({ ...n, due_date: e.target.value }))}
                     className="w-full px-4 py-3 rounded-xl border text-sm outline-none"
@@ -257,8 +254,7 @@ export default function FollowupsPage() {
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold tracking-wider uppercase"
-                    style={{ color: "var(--muted-foreground)" }}>Priority</label>
+                  <label className="text-xs font-bold tracking-wider uppercase" style={{ color: "var(--muted-foreground)" }}>Priority</label>
                   <div className="flex flex-col gap-1">
                     {(["high", "medium", "low"] as const).map(p => (
                       <button key={p} onClick={() => setNewTask(n => ({ ...n, priority: p }))}
