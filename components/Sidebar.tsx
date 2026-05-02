@@ -5,12 +5,13 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Kanban, Users, Calculator,
   TrendingUp, Bell, Radio, BarChart3,
-  Settings, LogOut, ChevronRight, Grid3x3, GraduationCap,
+  Settings, LogOut, ChevronRight, Grid3x3, GraduationCap, Phone,
 } from "lucide-react";
 import { useState } from "react";
 
 const navItems = [
   { href: "/dashboard",  label: "Dashboard",  icon: LayoutDashboard },
+  { href: "/call",       label: "Call Center", icon: Phone },
   { href: "/pipeline",   label: "Pipeline",   icon: Kanban },
   { href: "/buyers",     label: "Buyers",     icon: Users },
   { href: "/comps",      label: "Comps",      icon: TrendingUp },
@@ -24,12 +25,13 @@ const navItems = [
 const mobileNav = [
   { href: "/dashboard",  label: "Home",     icon: LayoutDashboard },
   { href: "/pipeline",   label: "Pipeline", icon: Kanban },
-  { href: "/scraper",    label: "Scraper",  icon: Radio, live: true },
-  { href: "/followups",  label: "Tasks",    icon: Bell },
+  { href: "/call",       label: "Calls",    icon: Phone },
+  { href: "/scraper",    label: "Import",   icon: Radio, live: true },
   { href: "/settings",   label: "More",     icon: Grid3x3 },
 ];
 
 const moreItems = [
+  { href: "/followups",  label: "Follow-ups",   icon: Bell },
   { href: "/buyers",     label: "Cash Buyers",  icon: Users },
   { href: "/comps",      label: "Comps Tool",   icon: TrendingUp },
   { href: "/calculator", label: "Calculator",   icon: Calculator },
