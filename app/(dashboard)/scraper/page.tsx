@@ -2,9 +2,9 @@
 
 import { useState, useRef } from "react";
 import {
-  Upload, Zap, ArrowUpRight, Check, X,
+  Upload, Zap, ArrowUpRight, Check,
   MapPin, DollarSign, Loader2, ChevronDown,
-  FileText, AlertCircle, Users,
+  FileText, AlertCircle, Users, ClipboardPaste, Phone,
 } from "lucide-react";
 import PageShell from "@/components/PageShell";
 import { createClient } from "@/utils/supabase/client";
@@ -49,15 +49,26 @@ function detectCol(headers: string[], candidates: string[]): string {
 
 export default function ScraperPage() {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [mode, setMode] = useState<"csv" | "paste">("csv");
+
+  // CSV state
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<RawRow[]>([]);
   const [colMap, setColMap] = useState({ address: "", owner: "", price: "", notes: "", status: "" });
   const [scoring, setScoring] = useState(false);
+  const [step, setStep] = useState<"upload" | "map" | "results">("upload");
+
+  // Paste state
+  const [pasteText, setPasteText] = useState("");
+  const [parsing, setParsing] = useState(false);
+  const [pasteError, setPasteError] = useState("");
+
+  // Shared results state
   const [scored, setScored] = useState<ScoredLead[]>([]);
   const [filter, setFilter] = useState<"all" | "high" | "medium" | "low">("all");
   const [addingAll, setAddingAll] = useState(false);
   const [error, setError] = useState("");
-  const [step, setStep] = useState<"upload" | "map" | "results">("upload");
+  const [showResults, setShowResults] = useState(false);
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -108,22 +119,66 @@ export default function ScraperPage() {
 
       setScored(scoredLeads);
       setStep("results");
+      setShowResults(true);
     } catch (e: any) {
       setError(e.message);
     }
     setScoring(false);
   }
 
+  async function runParse() {
+    if (!pasteText.trim()) return;
+    setParsing(true);
+    setPasteError("");
+    setScored([]);
+    try {
+      // Step 1: parse raw text into leads
+      const parseRes = await fetch("/api/parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: pasteText }),
+      });
+      const parsed = await parseRes.json();
+      if (!parseRes.ok) throw new Error(parsed.error ?? "Parse failed");
+      if (!parsed.length) throw new Error("No leads found in pasted text");
+
+      // Step 2: score the extracted leads
+      const scoreRes = await fetch("/api/score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leads: parsed.map((l: any, i: number) => ({ id: i, ...l })) }),
+      });
+      const scoreData = await scoreRes.json();
+      if (!scoreRes.ok) throw new Error(scoreData.error ?? "Scoring failed");
+
+      const scoredLeads: ScoredLead[] = scoreData
+        .map((s: any) => ({ ...s, raw: { ...parsed[s.id], _phone: parsed[s.id]?.phone } }))
+        .sort((a: ScoredLead, b: ScoredLead) => b.score - a.score);
+
+      setScored(scoredLeads);
+      setShowResults(true);
+    } catch (e: any) {
+      setPasteError(e.message);
+    }
+    setParsing(false);
+  }
+
   async function addToPool(lead: ScoredLead) {
-    const address = lead.raw[colMap.address] ?? "";
-    const price = lead.raw[colMap.price] ? Number(lead.raw[colMap.price].replace(/[^0-9.]/g, "")) : null;
-    const owner = lead.raw[colMap.owner] ?? null;
+    const isPaste = mode === "paste";
+    const address  = isPaste ? (lead.raw.address ?? "") : (lead.raw[colMap.address] ?? "");
+    const owner    = isPaste ? (lead.raw.owner_name ?? null) : (lead.raw[colMap.owner] ?? null);
+    const phone    = isPaste ? (lead.raw.phone ?? lead.raw._phone ?? null) : null;
+    const priceRaw = isPaste ? lead.raw.ask_price : lead.raw[colMap.price];
+    const price    = priceRaw ? Number(String(priceRaw).replace(/[^0-9.]/g, "")) || null : null;
+    const source   = isPaste ? (lead.raw.source ?? "Paste Import") : "CSV Import";
+
     await supabase.from("leads").insert({
       address,
       owner_name: owner || null,
+      phone: phone || null,
       ask_price: price || null,
       notes: lead.reason,
-      source: "CSV Import",
+      source,
       stage: "new",
       assigned_to: null,
     });
@@ -148,7 +203,73 @@ export default function ScraperPage() {
   return (
     <PageShell title="Lead Import" subtitle="Upload, score, and prioritize">
 
-      {step === "upload" && (
+      {/* mode tabs */}
+      {!showResults && (
+        <div className="flex gap-2 mb-5">
+          {([["csv", "Upload CSV", FileText], ["paste", "Paste Text", ClipboardPaste]] as const).map(([m, label, Icon]) => (
+            <button key={m} onClick={() => { setMode(m); setStep("upload"); setScored([]); setPasteText(""); setError(""); setPasteError(""); }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all"
+              style={{
+                background: mode === m ? "var(--invicta-green)20" : "var(--surface)",
+                color: mode === m ? "var(--invicta-green)" : "var(--muted-foreground)",
+                border: mode === m ? "1px solid var(--invicta-green)" : "1px solid var(--border)",
+              }}>
+              <Icon size={14} />{label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* paste mode */}
+      {mode === "paste" && !showResults && (
+        <div className="flex flex-col gap-4">
+          <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+            <h2 className="font-bold mb-1">Paste anything</h2>
+            <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
+              Ctrl+A → Ctrl+C a Zillow FSBO page, Facebook group post, Craigslist listing, or any text with property info. Claude extracts addresses, names, and phone numbers automatically.
+            </p>
+            <textarea
+              value={pasteText}
+              onChange={e => setPasteText(e.target.value)}
+              placeholder="Paste your text here — Zillow listing, Facebook FSBO post, Craigslist, anything..."
+              rows={12}
+              className="w-full px-4 py-3 rounded-xl border text-sm outline-none resize-none"
+              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--foreground)", fontFamily: "inherit" }}
+              onFocus={e => (e.target.style.borderColor = "var(--invicta-green)")}
+              onBlur={e => (e.target.style.borderColor = "var(--border)")}
+            />
+            {pasteError && (
+              <div className="flex items-center gap-2 text-xs mt-3 p-3 rounded-xl"
+                style={{ background: "var(--invicta-red)10", color: "var(--invicta-red)" }}>
+                <AlertCircle size={13} />{pasteError}
+              </div>
+            )}
+            <button onClick={runParse} disabled={parsing || !pasteText.trim()}
+              className="mt-4 w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-3"
+              style={{ background: pasteText.trim() ? "var(--invicta-green)" : "var(--surface-3)", color: pasteText.trim() ? "#000" : "var(--muted-foreground)" }}>
+              {parsing
+                ? <><Loader2 size={18} className="animate-spin" />Parsing &amp; scoring leads...</>
+                : <><Zap size={18} />Extract &amp; Score Leads</>}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { icon: ClipboardPaste, label: "Any source",    desc: "Zillow, Facebook, Craigslist" },
+              { icon: Phone,          label: "Gets numbers",  desc: "Extracts phone if posted" },
+              { icon: Zap,            label: "AI scored",     desc: "Ranked by motivation" },
+            ].map(({ icon: Icon, label, desc }) => (
+              <div key={label} className="rounded-xl p-4 text-center" style={{ background: "var(--surface)" }}>
+                <Icon size={18} className="mx-auto mb-2" style={{ color: "var(--invicta-green)" }} />
+                <p className="text-xs font-bold">{label}</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {step === "upload" && mode === "csv" && (
         <div className="flex flex-col gap-4">
           <div
             onClick={() => fileRef.current?.click()}
@@ -185,7 +306,7 @@ export default function ScraperPage() {
         </div>
       )}
 
-      {step === "map" && (
+      {step === "map" && mode === "csv" && (
         <div className="flex flex-col gap-5">
           <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
             <div className="flex items-center justify-between mb-4">
@@ -259,7 +380,7 @@ export default function ScraperPage() {
         </div>
       )}
 
-      {step === "results" && (
+      {showResults && (
         <div className="flex flex-col gap-4">
           {/* summary bar */}
           <div className="rounded-2xl border p-4 flex items-center justify-between flex-wrap gap-3"
@@ -280,7 +401,7 @@ export default function ScraperPage() {
               )}
             </div>
             <div className="flex gap-2">
-              <button onClick={() => { setStep("upload"); setScored([]); setRows([]); }}
+              <button onClick={() => { setStep("upload"); setScored([]); setRows([]); setPasteText(""); setShowResults(false); }}
                 className="text-xs px-3 py-1.5 rounded-lg font-bold"
                 style={{ background: "var(--surface-3)", color: "var(--muted-foreground)" }}>
                 New Import
@@ -343,9 +464,14 @@ export default function ScraperPage() {
                     <p className="text-xs italic" style={{ color: "var(--muted-foreground)" }}>
                       {lead.reason}
                     </p>
-                    {lead.raw[colMap.price] && (
+                    {(lead.raw[colMap.price] || lead.raw.ask_price) && (
                       <p className="text-xs mt-1 font-bold" style={{ color: "var(--invicta-amber)" }}>
-                        <DollarSign size={10} className="inline" />{lead.raw[colMap.price]}
+                        <DollarSign size={10} className="inline" />{lead.raw[colMap.price] || lead.raw.ask_price}
+                      </p>
+                    )}
+                    {(lead.raw.phone || lead.raw._phone) && (
+                      <p className="text-xs mt-1 font-bold flex items-center gap-1" style={{ color: "var(--invicta-green)" }}>
+                        <Phone size={10} />{lead.raw.phone || lead.raw._phone}
                       </p>
                     )}
                   </div>
