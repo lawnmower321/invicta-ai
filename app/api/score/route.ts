@@ -8,24 +8,32 @@ export async function POST(req: Request) {
     const { leads } = await req.json();
     if (!leads?.length) return NextResponse.json([], { status: 200 });
 
-    const prompt = `You are a wholesale real estate expert. Score each of these leads 1-10 for motivated seller likelihood.
+    const prompt = `You are a veteran wholesale real estate coach with 15+ years closing deals in the Northeast US. Score each lead AND give actionable mentor advice for how to approach that specific seller.
 
-High scores (8-10) go to leads with:
-- Pre-foreclosure, lis pendens, or foreclosure status
+SCORING — High (8-10):
+- Pre-foreclosure, lis pendens, foreclosure, tax delinquent
 - Out-of-state or absentee owner
-- Tax delinquency mentioned
-- Long time on market (60+ days) or price reductions
-- AS-IS, needs major repairs, condition problems
-- Urgency words: must sell, divorce, estate, death, relocating, job transfer, behind on payments
-- Bank-owned, inherited property, probate
+- Probate, estate sale, inherited property
+- Divorce, death, job transfer, relocation
+- AS-IS, major repairs needed, vacant
+- 60+ days on market, price reductions, must sell
 
-Low scores (1-4): Listed with agent, priced at market, no urgency signals, new listing no info.
+Low (1-4): agent-listed, priced at market, new listing, no urgency signals.
 
-Leads to score:
+MENTOR NOTE — write like a coach whispering in their ear before the call. Be specific to THIS lead's situation. Include:
+- How to open the call (first sentence)
+- The real pain point to address based on their situation
+- One thing NOT to say
+- What a motivated response looks like vs a dead end
+- Any red flags or green flags in the data
+
+Keep mentor note under 4 sentences. Be direct, no fluff.
+
+Leads:
 ${JSON.stringify(leads.map((l: any, i: number) => ({ id: i, ...l })), null, 2)}
 
-Respond with ONLY a valid JSON array, no markdown, no explanation:
-[{"id": 0, "score": 8, "priority": "high", "reason": "one sentence max"}]
+Return ONLY valid JSON, no markdown:
+[{"id": 0, "score": 8, "priority": "high", "reason": "one sentence on why this score", "mentorNote": "Lead with empathy not price. Open with: 'I saw your property and wanted to reach out personally — are you still looking to sell?' They're likely stressed about the foreclosure timeline, not the money. Don't mention your fee. If they ask about repairs, you've got a live one."}]
 
 Priority must be exactly: "high" (8-10), "medium" (5-7), "low" (1-4)`;
 

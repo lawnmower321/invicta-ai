@@ -17,8 +17,10 @@ type ScoredLead = {
   score: number;
   priority: "high" | "medium" | "low";
   reason: string;
+  mentorNote?: string;
   raw: RawRow;
   added?: boolean;
+  expanded?: boolean;
 };
 
 const PRIORITY_CONFIG = {
@@ -152,7 +154,7 @@ export default function ScraperPage() {
       if (!scoreRes.ok) throw new Error(scoreData.error ?? "Scoring failed");
 
       const scoredLeads: ScoredLead[] = scoreData
-        .map((s: any) => ({ ...s, raw: { ...parsed[s.id], _phone: parsed[s.id]?.phone } }))
+        .map((s: any) => ({ ...s, mentorNote: s.mentorNote, raw: { ...parsed[s.id], _phone: parsed[s.id]?.phone } }))
         .sort((a: ScoredLead, b: ScoredLead) => b.score - a.score);
 
       setScored(scoredLeads);
@@ -473,6 +475,13 @@ export default function ScraperPage() {
                       <p className="text-xs mt-1 font-bold flex items-center gap-1" style={{ color: "var(--invicta-green)" }}>
                         <Phone size={10} />{lead.raw.phone || lead.raw._phone}
                       </p>
+                    )}
+                    {lead.mentorNote && (
+                      <div className="mt-2.5 rounded-lg p-2.5"
+                        style={{ background: "var(--invicta-amber)12", border: "1px solid var(--invicta-amber)25" }}>
+                        <p className="text-xs font-bold mb-1" style={{ color: "var(--invicta-amber)" }}>Mentor</p>
+                        <p className="text-xs leading-relaxed" style={{ color: "var(--foreground)" }}>{lead.mentorNote}</p>
+                      </div>
                     )}
                   </div>
 
