@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Kanban, Users, Calculator,
   TrendingUp, Bell, Radio, BarChart3,
-  Settings, LogOut, ChevronRight, Grid3x3,
+  Settings, LogOut, ChevronRight, Grid3x3, GraduationCap,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -18,6 +18,7 @@ const navItems = [
   { href: "/followups",  label: "Follow-ups", icon: Bell },
   { href: "/scraper",    label: "Scraper",    icon: Radio },
   { href: "/analytics",  label: "Analytics",  icon: BarChart3 },
+  { href: "/learn",      label: "Learn",       icon: GraduationCap },
 ];
 
 const mobileNav = [
@@ -33,6 +34,7 @@ const moreItems = [
   { href: "/comps",      label: "Comps Tool",   icon: TrendingUp },
   { href: "/calculator", label: "Calculator",   icon: Calculator },
   { href: "/analytics",  label: "Analytics",    icon: BarChart3 },
+  { href: "/learn",      label: "Learn",        icon: GraduationCap },
   { href: "/settings",   label: "Settings",     icon: Settings },
 ];
 

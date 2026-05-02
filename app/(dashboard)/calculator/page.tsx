@@ -100,6 +100,25 @@ function CalculatorContent() {
   const [maoFactor, setMaoFactor] = useState(70);
   const [financing, setFinancing] = useState("cash");
   const [saved, setSaved] = useState(false);
+  const [sqft, setSqft] = useState(params.get("sqft") ?? "");
+  const [conditionLevel, setConditionLevel] = useState<string>("");
+
+  const CONDITION_LEVELS = [
+    { id: "light",    label: "Light Cosmetic",  range: [15, 25],  desc: "Paint, flooring, fixtures" },
+    { id: "moderate", label: "Moderate",         range: [25, 40],  desc: "Kitchen + 1 bath, new systems" },
+    { id: "major",    label: "Major Rehab",      range: [40, 60],  desc: "Full gut, kitchen + all baths" },
+    { id: "gut",      label: "Full Gut",         range: [60, 80],  desc: "Structural, everything replaced" },
+  ];
+
+  function applyCondition(id: string) {
+    setConditionLevel(id);
+    const level = CONDITION_LEVELS.find(c => c.id === id);
+    if (!level || !sqft) return;
+    const sqftN = Number(sqft.replace(/\D/g, ""));
+    if (!sqftN) return;
+    const midpoint = Math.round((level.range[0] + level.range[1]) / 2);
+    setRepair(String(sqftN * midpoint));
+  }
 
   // Quick Offer AI
   const [condition, setCondition] = useState("");
@@ -186,13 +205,65 @@ function CalculatorContent() {
             <div className="flex flex-col gap-4">
               <InputRow label="After Repair Value (ARV)" value={arv} onChange={setArv}
                 placeholder="290,000" color="var(--invicta-blue)" />
-              <InputRow label="Repair Estimate" value={repair} onChange={setRepair}
-                placeholder="45,000" color="var(--invicta-red)"
-                hint="Rehab costs buyer pays" />
               <InputRow label="Owner Ask Price" value={askPrice} onChange={setAskPrice}
                 placeholder="165,000" color="var(--invicta-amber)" />
               <InputRow label="Your Assignment Fee" value={assignFee} onChange={setAssignFee}
                 placeholder="10,000" color="var(--invicta-green)" />
+
+              {/* repair estimator */}
+              <div className="flex flex-col gap-2 pt-2 border-t" style={{ borderColor: "var(--border)" }}>
+                <p className="text-xs font-bold tracking-wider uppercase" style={{ color: "var(--muted-foreground)" }}>
+                  Repair Estimate
+                </p>
+                <div className="flex gap-2">
+                  <div className="flex-1 relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold"
+                      style={{ color: "var(--muted-foreground)" }}>sqft</span>
+                    <input type="text" value={sqft}
+                      onChange={e => { setSqft(e.target.value); if (conditionLevel) applyCondition(conditionLevel); }}
+                      placeholder="1,400"
+                      className="w-full pl-10 pr-3 py-3 rounded-xl border text-sm font-bold outline-none"
+                      style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--foreground)", fontFamily: "inherit" }}
+                      onFocus={e => (e.target.style.borderColor = "var(--invicta-red)")}
+                      onBlur={e => (e.target.style.borderColor = "var(--border)")}
+                    />
+                  </div>
+                  <div className="flex-1 relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold"
+                      style={{ color: "var(--invicta-red)" }}>$</span>
+                    <input type="text" value={repair} onChange={e => setRepair(e.target.value)}
+                      placeholder="45,000"
+                      className="w-full pl-7 pr-3 py-3 rounded-xl border text-sm font-bold outline-none"
+                      style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--foreground)", fontFamily: "inherit" }}
+                      onFocus={e => (e.target.style.borderColor = "var(--invicta-red)")}
+                      onBlur={e => (e.target.style.borderColor = "var(--border)")}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    { id: "light",    label: "Light",    desc: "$15-25/sqft" },
+                    { id: "moderate", label: "Moderate", desc: "$25-40/sqft" },
+                    { id: "major",    label: "Major",    desc: "$40-60/sqft" },
+                    { id: "gut",      label: "Full Gut", desc: "$60-80/sqft" },
+                  ].map(c => (
+                    <button key={c.id} onClick={() => applyCondition(c.id)}
+                      className="px-3 py-2 rounded-xl text-left transition-all"
+                      style={{
+                        background: conditionLevel === c.id ? "var(--invicta-red)20" : "var(--surface-3)",
+                        border: conditionLevel === c.id ? "1px solid var(--invicta-red)" : "1px solid var(--border)",
+                      }}>
+                      <p className="text-xs font-bold" style={{ color: conditionLevel === c.id ? "var(--invicta-red)" : "var(--foreground)" }}>
+                        {c.label}
+                      </p>
+                      <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{c.desc}</p>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                  Enter sqft + pick condition → repair estimate auto-fills
+                </p>
+              </div>
             </div>
           </div>
 
