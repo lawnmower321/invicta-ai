@@ -5,6 +5,7 @@ import {
   Upload, Zap, ArrowUpRight, Check,
   MapPin, DollarSign, Loader2, ChevronDown,
   FileText, AlertCircle, Users, ClipboardPaste, Phone,
+  History, Trash2, X, SquareCheck, Square,
 } from "lucide-react";
 import PageShell from "@/components/PageShell";
 import { createClient } from "@/utils/supabase/client";
@@ -71,6 +72,13 @@ export default function ScraperPage() {
   const [addingAll, setAddingAll] = useState(false);
   const [error, setError] = useState("");
   const [showResults, setShowResults] = useState(false);
+
+  // History state
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyLeads, setHistoryLeads] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -165,6 +173,44 @@ export default function ScraperPage() {
     setParsing(false);
   }
 
+  async function openHistory() {
+    setShowHistory(true);
+    setHistoryLoading(true);
+    setSelected(new Set());
+    const { data } = await supabase
+      .from("leads")
+      .select("id, address, source, ask_price, owner_name, created_at")
+      .in("source", ["CSV Import", "Paste Import", "Zillow FSBO", "Facebook FSBO", "Facebook Group", "Craigslist"])
+      .order("created_at", { ascending: false });
+    setHistoryLeads(data ?? []);
+    setHistoryLoading(false);
+  }
+
+  function toggleSelect(id: string) {
+    setSelected(prev => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  }
+
+  function toggleAll() {
+    if (selected.size === historyLeads.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(historyLeads.map(l => l.id)));
+    }
+  }
+
+  async function deleteSelected() {
+    if (!selected.size) return;
+    setDeleting(true);
+    await supabase.from("leads").delete().in("id", Array.from(selected));
+    setHistoryLeads(prev => prev.filter(l => !selected.has(l.id)));
+    setSelected(new Set());
+    setDeleting(false);
+  }
+
   async function addToPool(lead: ScoredLead) {
     const isPaste = mode === "paste";
     const address  = isPaste ? (lead.raw.address ?? "") : (lead.raw[colMap.address] ?? "");
@@ -203,7 +249,14 @@ export default function ScraperPage() {
   const addedCount = scored.filter(l => l.added).length;
 
   return (
-    <PageShell title="Lead Import" subtitle="Upload, score, and prioritize">
+    <PageShell title="Lead Import" subtitle="Upload, score, and prioritize"
+      action={
+        <button onClick={openHistory}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-sm transition-all"
+          style={{ background: "var(--surface-2)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}>
+          <History size={14} /> History
+        </button>
+      }>
 
       {/* mode tabs */}
       {!showResults && (
@@ -498,6 +551,99 @@ export default function ScraperPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+      {/* History Modal */}
+      {showHistory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-end"
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+          onClick={e => e.target === e.currentTarget && setShowHistory(false)}>
+          <div className="h-full w-full max-w-md border-l flex flex-col"
+            style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+
+            {/* header */}
+            <div className="px-5 py-4 border-b flex items-center justify-between flex-shrink-0"
+              style={{ borderColor: "var(--border)" }}>
+              <div>
+                <h2 className="font-bold">Import History</h2>
+                <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
+                  {historyLeads.length} imported leads in pool
+                </p>
+              </div>
+              <button onClick={() => setShowHistory(false)}
+                className="w-7 h-7 rounded-lg flex items-center justify-center"
+                style={{ background: "var(--surface-3)" }}>
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* toolbar */}
+            {historyLeads.length > 0 && (
+              <div className="px-5 py-3 border-b flex items-center justify-between flex-shrink-0"
+                style={{ borderColor: "var(--border)" }}>
+                <button onClick={toggleAll}
+                  className="flex items-center gap-2 text-xs font-bold"
+                  style={{ color: "var(--muted-foreground)" }}>
+                  {selected.size === historyLeads.length
+                    ? <SquareCheck size={15} style={{ color: "var(--invicta-green)" }} />
+                    : <Square size={15} />}
+                  {selected.size === historyLeads.length ? "Deselect All" : "Select All"}
+                </button>
+                {selected.size > 0 && (
+                  <button onClick={deleteSelected} disabled={deleting}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold"
+                    style={{ background: "var(--invicta-red)20", color: "var(--invicta-red)" }}>
+                    {deleting
+                      ? <Loader2 size={12} className="animate-spin" />
+                      : <Trash2 size={12} />}
+                    Delete {selected.size}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* list */}
+            <div className="flex-1 overflow-y-auto">
+              {historyLoading && (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 size={20} className="animate-spin" style={{ color: "var(--muted-foreground)" }} />
+                </div>
+              )}
+              {!historyLoading && historyLeads.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+                  <History size={28} className="mb-3 opacity-30" />
+                  <p className="font-bold mb-1">No imported leads yet</p>
+                  <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+                    Leads added via CSV or Paste will appear here
+                  </p>
+                </div>
+              )}
+              {!historyLoading && historyLeads.map(lead => {
+                const isSelected = selected.has(lead.id);
+                return (
+                  <div key={lead.id}
+                    onClick={() => toggleSelect(lead.id)}
+                    className="px-5 py-3.5 border-b flex items-center gap-3 cursor-pointer transition-all"
+                    style={{
+                      borderColor: "var(--border)",
+                      background: isSelected ? "var(--invicta-red)08" : "transparent",
+                    }}>
+                    {isSelected
+                      ? <SquareCheck size={16} style={{ color: "var(--invicta-red)", flexShrink: 0 }} />
+                      : <Square size={16} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold truncate">{lead.address}</p>
+                      <div className="flex items-center gap-2 mt-0.5 text-xs" style={{ color: "var(--muted-foreground)" }}>
+                        <span>{lead.source}</span>
+                        {lead.ask_price && <span>· ${lead.ask_price.toLocaleString()}</span>}
+                        <span>· {new Date(lead.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
