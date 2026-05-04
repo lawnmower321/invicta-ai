@@ -163,6 +163,7 @@ export default function PipelinePage() {
     setDragging(null);
     setOverCol(null);
     setOverPool(false);
+    dragId.current = null;
   }
 
   async function onDropKanban(stageId: string) {

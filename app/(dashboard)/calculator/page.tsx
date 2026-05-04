@@ -5,17 +5,10 @@ import { useSearchParams } from "next/navigation";
 import { Calculator, TrendingUp, Save, Check, Zap, Loader2, Copy, ChevronDown, ChevronUp } from "lucide-react";
 import PageShell from "@/components/PageShell";
 import { createClient } from "@/utils/supabase/client";
+import { fmt, parseDollar } from "@/utils/format";
+import { CONDITION_LEVELS } from "@/utils/conditions";
 
 const supabase = createClient();
-
-function fmt(n: number) {
-  return isNaN(n) || !isFinite(n) ? "—" : "$" + Math.round(n).toLocaleString();
-}
-
-function parseDollar(s: string): number {
-  const n = Number(s.replace(/[^0-9.]/g, ""));
-  return isNaN(n) ? 0 : n;
-}
 
 function InputRow({
   label, value, onChange, placeholder, color, hint,
@@ -103,12 +96,6 @@ function CalculatorContent() {
   const [sqft, setSqft] = useState(params.get("sqft") ?? "");
   const [conditionLevel, setConditionLevel] = useState<string>("");
 
-  const CONDITION_LEVELS = [
-    { id: "light",    label: "Light Cosmetic",  range: [15, 25],  desc: "Paint, flooring, fixtures" },
-    { id: "moderate", label: "Moderate",         range: [25, 40],  desc: "Kitchen + 1 bath, new systems" },
-    { id: "major",    label: "Major Rehab",      range: [40, 60],  desc: "Full gut, kitchen + all baths" },
-    { id: "gut",      label: "Full Gut",         range: [60, 80],  desc: "Structural, everything replaced" },
-  ];
 
   function applyCondition(id: string) {
     setConditionLevel(id);

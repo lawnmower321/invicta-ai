@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import {
-  Phone, MapPin, User, DollarSign, FileText,
+  Phone, MapPin, User, DollarSign,
   Zap, Loader2, ChevronDown, Check, Copy,
   ArrowRight, Clock, CheckCircle2, XCircle,
-  PhoneMissed, PhoneOff, Calendar, Plus,
+  PhoneMissed, PhoneOff, Plus,
 } from "lucide-react";
 import PageShell from "@/components/PageShell";
+import { fmt, parseDollar } from "@/utils/format";
+import { CONDITION_LEVELS } from "@/utils/conditions";
 
 const supabase = createClient();
 
@@ -26,13 +28,6 @@ type Lead = {
   assigned_to: string | null;
 };
 
-const CONDITION_LEVELS = [
-  { id: "light",    label: "Light",    range: [15, 25],  desc: "Paint, floors" },
-  { id: "moderate", label: "Moderate", range: [25, 40],  desc: "Kitchen + bath" },
-  { id: "major",    label: "Major",    range: [40, 60],  desc: "Full interior" },
-  { id: "gut",      label: "Gut",      range: [60, 80],  desc: "Everything" },
-];
-
 const OUTCOMES = [
   { id: "interested",  label: "Interested",      icon: CheckCircle2, color: "var(--invicta-green)",  stage: "qualified" },
   { id: "voicemail",   label: "Left Voicemail",  icon: PhoneMissed,  color: "var(--invicta-amber)",  stage: "contacted" },
@@ -40,9 +35,6 @@ const OUTCOMES = [
   { id: "notinterested",label: "Not Interested", icon: XCircle,     color: "var(--muted-foreground)",stage: "contacted" },
   { id: "wrongnumber", label: "Wrong Number",    icon: PhoneOff,     color: "var(--invicta-red)",    stage: "contacted" },
 ];
-
-function fmt(n: number) { return "$" + Math.round(n).toLocaleString(); }
-function parseDollar(s: string) { const n = Number(s.replace(/[^0-9.]/g, "")); return isNaN(n) ? 0 : n; }
 
 export default function CallPage() {
   const [userId, setUserId] = useState<string | null>(null);
