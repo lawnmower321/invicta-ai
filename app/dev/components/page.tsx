@@ -1,5 +1,12 @@
 import { notFound } from "next/navigation"
 import { Spinner } from "@/components/invicta/Spinner"
+import { StatBadge } from "@/components/invicta/StatBadge"
+import { StageBadge } from "@/components/invicta/badges/StageBadge"
+import { PriorityBadge } from "@/components/invicta/badges/PriorityBadge"
+import { SourceBadge } from "@/components/invicta/badges/SourceBadge"
+import { SpreadBadge } from "@/components/invicta/badges/SpreadBadge"
+import { ScoreBadge } from "@/components/invicta/badges/ScoreBadge"
+import { Radio } from "lucide-react"
 
 export default function DevComponentsPage() {
   if (process.env.NODE_ENV === "production") notFound()
@@ -35,6 +42,67 @@ export default function DevComponentsPage() {
               <Spinner /><span className="text-xs">currentColor (red parent)</span>
             </div>
             <Spinner size="md" label="Generating campaign..." />
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground pb-2 mb-3 border-b border-white/[0.06]">
+            StatBadge — base
+          </h2>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              {(["neutral","green","blue","purple","amber","red"] as const).map(a => (
+                <StatBadge key={a} label={a} accent={a} />
+              ))}
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <StatBadge label="xs" accent="green" size="xs" />
+              <StatBadge label="sm (default)" accent="green" size="sm" />
+              <StatBadge label="md" accent="green" size="md" />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <StatBadge label="soft" accent="purple" variant="soft" />
+              <StatBadge label="outline" accent="purple" variant="outline" />
+              <StatBadge label="solid" accent="purple" variant="solid" />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <StatBadge label="LIVE" accent="red" pulse />
+              <StatBadge label="With icon" accent="blue" icon={Radio} />
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground pb-2 mb-3 border-b border-white/[0.06]">
+            StatBadge — presets
+          </h2>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              {(["new","contacted","qualified","offer","contract","closed"] as const).map(s => (
+                <StageBadge key={s} stage={s} />
+              ))}
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <PriorityBadge priority="high" />
+              <PriorityBadge priority="medium" />
+              <PriorityBadge priority="low" />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <SourceBadge source="Zillow" />
+              <SourceBadge source="MLS" />
+              <SourceBadge source="Driving" />
+              <SourceBadge source="Unknown" />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <SpreadBadge value={12000} />
+              <SpreadBadge value={0} />
+              <SpreadBadge value={-3500} />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <ScoreBadge score={9} />
+              <ScoreBadge score={6} />
+              <ScoreBadge score={3} />
+            </div>
           </div>
         </section>
       </main>
