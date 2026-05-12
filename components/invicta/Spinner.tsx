@@ -37,8 +37,11 @@ export function Spinner({ size = "sm", accent, label, className }: SpinnerProps)
       role="status"
     >
       <Loader2 size={pxSize} className="motion-safe:animate-spin" aria-hidden="true" />
-      {label && <span className="text-xs text-muted-foreground">{label}</span>}
-      <span className="sr-only">{label ?? "Loading"}</span>
+      {label ? (
+        <span className="text-xs text-muted-foreground">{label}</span>
+      ) : (
+        <span className="sr-only">Loading</span>
+      )}
     </span>
   )
 }

@@ -1,7 +1,8 @@
 import { cn } from "@/lib/utils"
 import { SpreadBadge } from "./badges/SpreadBadge"
 import { accent as accentToken } from "./tokens"
-import type { AccentColor, Lead, PipelineStage } from "./types"
+import { STAGE_ACCENT, PRIORITY_ACCENT } from "./presets.constants"
+import type { AccentColor, Lead } from "./types"
 
 type LeadCardVariant = "pool" | "kanban" | "scored" | "compact"
 
@@ -16,21 +17,6 @@ type LeadCardProps = {
   onAction?: (action: LeadCardAction, id: string) => void
   showActions?: boolean
   stageColor?: AccentColor
-}
-
-const STAGE_ACCENT: Record<PipelineStage, AccentColor> = {
-  new: "blue",
-  contacted: "amber",
-  qualified: "purple",
-  offer: "green",
-  contract: "green",
-  closed: "red",
-}
-
-const PRIORITY_ACCENT: Record<NonNullable<Lead["priority"]>, AccentColor> = {
-  high: "red",
-  medium: "amber",
-  low: "neutral",
 }
 
 function fmtPrice(n: number | null | undefined): string {
@@ -167,7 +153,7 @@ function ScoredVariant(props: LeadCardProps) {
       onClick={() => onClick?.(lead.id)}
       className={cn(
         "p-4 rounded-xl border transition-all duration-150 ease-out cursor-pointer",
-        "hover:-translate-y-px hover:bg-white/[0.02]"
+        "hover:-translate-y-px hover:border-white/[0.16]"
       )}
       style={{ borderColor: tok.border, ...selectionRing(tok, selected) }}
       title={lead.address}
@@ -201,7 +187,7 @@ function ScoredVariant(props: LeadCardProps) {
       {lead.mentor_note && (
         <div className="mt-3 pt-3 border-t border-white/[0.06] flex items-start gap-2">
           <span aria-hidden="true">💡</span>
-          <div className="text-xs flex-1" style={{ color: "var(--invicta-amber)" }}>
+          <div className="text-xs flex-1" style={{ color: accentToken("amber").fg }}>
             <span className="font-semibold uppercase tracking-[0.08em] text-[10px] mr-1">Mentor:</span>
             {lead.mentor_note}
           </div>

@@ -1,5 +1,6 @@
 import { StatBadge, type StatBadgeSize } from "../StatBadge"
-import type { AccentColor, PipelineStage } from "../types"
+import { STAGE_ACCENT } from "../presets.constants"
+import type { PipelineStage } from "../types"
 
 const STAGE_LABELS: Record<PipelineStage, string> = {
   new: "New",
@@ -8,15 +9,6 @@ const STAGE_LABELS: Record<PipelineStage, string> = {
   offer: "Offer",
   contract: "Contract",
   closed: "Closed",
-}
-
-const STAGE_ACCENT: Record<PipelineStage, AccentColor> = {
-  new: "blue",
-  contacted: "amber",
-  qualified: "purple",
-  offer: "green",
-  contract: "green",
-  closed: "red",
 }
 
 export function StageBadge({ stage, size }: { stage: PipelineStage; size?: StatBadgeSize }) {

@@ -31,7 +31,10 @@ export default function PageShell({
   const router = useRouter()
   const scrolled = useScrolled(8)
 
-  const pageAccentVar = accentName ? accentToken(accentName).solid : "var(--invicta-green)"
+  // Default --page-accent is neutral per spec §3.5. Pages opt into a dominant
+  // accent color by passing the `accent` prop; nested SectionHeader/EmptyState
+  // then inherit it. Spinner is the one exception that never inherits.
+  const pageAccentVar = accentToken(accentName ?? "neutral").solid
   // Mobile header height: h-12 when no eyebrow, h-14 when eyebrow is present. Desktop is h-14 either way.
   const headerHeightMobile = eyebrow ? "h-14" : "h-12"
 
