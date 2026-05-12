@@ -106,6 +106,7 @@ export default function BuyersPage() {
 
   return (
     <PageShell
+      accent="purple"
       title="Cash Buyers"
       subtitle={loading ? "loading..." : `${buyers.length} in network`}
       action={
@@ -121,7 +122,7 @@ export default function BuyersPage() {
         <input type="text" value={query} onChange={e => setQuery(e.target.value)}
           placeholder="Search buyers or markets..."
           className="w-full pl-11 pr-4 py-3 rounded-xl border text-sm outline-none transition-all"
-          style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--foreground)", fontFamily: "inherit" }}
+          style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)", color: "var(--foreground)", fontFamily: "inherit" }}
           onFocus={e => (e.target.style.borderColor = "var(--invicta-blue)")}
           onBlur={e => (e.target.style.borderColor = "var(--border)")}
         />
@@ -150,7 +151,7 @@ export default function BuyersPage() {
           {filtered.map(buyer => (
             <button key={buyer.id} onClick={() => setSelected(buyer)}
               className="rounded-2xl border p-5 text-left transition-all hover:border-opacity-70"
-              style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+              data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold"
                   style={{ background: "var(--invicta-blue)20", color: "var(--invicta-blue)" }}>

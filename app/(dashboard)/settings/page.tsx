@@ -158,7 +158,7 @@ export default function SettingsPage() {
 
         <div className="flex-1">
           {tab === "profile" && (
-            <div className="rounded-2xl border p-6 flex flex-col gap-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+            <div className="rounded-2xl border p-6 flex flex-col gap-5" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
               <div className="flex items-center justify-between">
                 <h2 className="font-bold">Your Profile</h2>
                 <SaveBtn onClick={save} saved={saved} />
@@ -194,7 +194,7 @@ export default function SettingsPage() {
           )}
 
           {tab === "markets" && (
-            <div className="rounded-2xl border p-6 flex flex-col gap-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+            <div className="rounded-2xl border p-6 flex flex-col gap-5" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
               <div className="flex items-center justify-between">
                 <h2 className="font-bold">Market Targets</h2>
                 <SaveBtn onClick={save} saved={saved} />
@@ -229,7 +229,7 @@ export default function SettingsPage() {
           )}
 
           {tab === "notifications" && (
-            <div className="rounded-2xl border p-6 flex flex-col gap-4" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+            <div className="rounded-2xl border p-6 flex flex-col gap-4" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
               <div className="flex items-center justify-between mb-1">
                 <h2 className="font-bold">Notifications</h2>
                 <SaveBtn onClick={save} saved={saved} />
@@ -257,7 +257,7 @@ export default function SettingsPage() {
           )}
 
           {tab === "integrations" && (
-            <div className="rounded-2xl border p-6 flex flex-col gap-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+            <div className="rounded-2xl border p-6 flex flex-col gap-5" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
               <div className="flex items-center justify-between">
                 <h2 className="font-bold">Integrations</h2>
                 <SaveBtn onClick={save} saved={saved} />

@@ -10,6 +10,7 @@ import {
   Megaphone, Copy, Check, Zap,
 } from "lucide-react";
 import PageShell from "@/components/PageShell";
+import { STAGE_ACCENT } from "@/components/invicta/presets.constants";
 
 const supabase = createClient();
 
@@ -238,6 +239,7 @@ export default function LeadDetailPage() {
 
   return (
     <PageShell
+      accent={STAGE_ACCENT[lead.stage as keyof typeof STAGE_ACCENT] ?? "neutral"}
       title={lead.address}
       subtitle={lead.owner_name ?? lead.source}
       back
@@ -248,7 +250,7 @@ export default function LeadDetailPage() {
         <div className="col-span-2 flex flex-col gap-4">
 
           {/* deal numbers */}
-          <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <div className="rounded-2xl border p-5" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
             <h2 className="text-xs font-bold tracking-widest uppercase mb-4" style={{ color: "var(--muted-foreground)" }}>Deal Numbers</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
               {[
@@ -290,7 +292,7 @@ export default function LeadDetailPage() {
 
           {/* property info */}
           {(lead.beds || lead.baths || lead.sqft || lead.year_built) && (
-            <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+            <div className="rounded-2xl border p-5" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
               <h2 className="text-xs font-bold tracking-widest uppercase mb-4" style={{ color: "var(--muted-foreground)" }}>Property Info</h2>
               <div className="grid grid-cols-4 gap-3">
                 {[
@@ -309,7 +311,7 @@ export default function LeadDetailPage() {
           )}
 
           {/* notes */}
-          <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <div className="rounded-2xl border p-5" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted-foreground)" }}>Notes</h2>
               {editingNotes
@@ -386,7 +388,7 @@ export default function LeadDetailPage() {
         <div className="flex flex-col gap-4">
 
           {/* contact */}
-          <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <div className="rounded-2xl border p-5" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
             <h2 className="text-xs font-bold tracking-widest uppercase mb-4" style={{ color: "var(--muted-foreground)" }}>Owner Contact</h2>
             <div className="flex flex-col gap-2">
               {lead.owner_name && (
@@ -436,7 +438,7 @@ export default function LeadDetailPage() {
           )}
 
           {/* tasks */}
-          <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <div className="rounded-2xl border p-5" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
             <h2 className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: "var(--muted-foreground)" }}>Follow-up Tasks</h2>
             <div className="flex flex-col gap-2 mb-3">
               {tasks.map(task => (
@@ -465,7 +467,7 @@ export default function LeadDetailPage() {
           </div>
 
           {/* activity log */}
-          <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <div className="rounded-2xl border p-5" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
             <h2 className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: "var(--muted-foreground)" }}>Activity Log</h2>
             <div className="flex flex-col gap-3 mb-3">
               {activity.length === 0 && <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>No activity yet.</p>}

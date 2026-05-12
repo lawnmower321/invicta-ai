@@ -184,10 +184,10 @@ export default function CallPage() {
   const in3 = new Date(Date.now() + 3 * 86400000).toISOString().split("T")[0];
 
   return (
-    <PageShell title="Call Center" subtitle="Live deal cockpit">
+    <PageShell accent="amber" title="Call Center" subtitle="Live deal cockpit">
 
       {/* Lead Selector */}
-      <div className="rounded-2xl border p-4 mb-4" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="rounded-2xl border p-4 mb-4" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
         <div className="flex gap-2 mb-3">
           {([["pool", "Lead Pool"], ["mine", "My Pipeline"]] as const).map(([g, label]) => (
             <button key={g} onClick={() => setLeadGroup(g)}
@@ -297,7 +297,7 @@ export default function CallPage() {
           </div>
 
           {/* Live MAO Calculator */}
-          <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <div className="rounded-2xl border p-5" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
             <p className="text-xs font-bold tracking-widest uppercase mb-4" style={{ color: "var(--muted-foreground)" }}>
               Live MAO Calculator
             </p>
@@ -454,7 +454,7 @@ export default function CallPage() {
           </div>
 
           {/* Call Logger */}
-          <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <div className="rounded-2xl border p-5" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
             <p className="text-xs font-bold tracking-widest uppercase mb-4" style={{ color: "var(--muted-foreground)" }}>
               Log This Call
             </p>

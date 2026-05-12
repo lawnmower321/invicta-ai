@@ -40,7 +40,7 @@ export default function PageShell({
 
   return (
     <div
-      className="min-h-screen"
+      className="relative min-h-screen overflow-hidden"
       style={
         {
           background: "var(--background)",
@@ -48,9 +48,21 @@ export default function PageShell({
         } as React.CSSProperties
       }
     >
+      {/* Ambient glow layer — reacts to --page-accent; sits below all content */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <div
+          className="absolute -top-48 -left-24 w-[600px] h-[600px] rounded-full blur-[140px]"
+          style={{ background: "var(--page-accent)", opacity: 0.08 }}
+        />
+        <div
+          className="absolute -bottom-48 -right-24 w-[400px] h-[400px] rounded-full blur-[120px]"
+          style={{ background: "var(--page-accent)", opacity: 0.05 }}
+        />
+      </div>
+
       <div
         className={cn(
-          "sticky top-[52px] md:top-0 z-30 border-b transition-colors duration-150 px-5 md:px-8",
+          "relative z-30 sticky top-[52px] md:top-0 border-b transition-colors duration-150 px-5 md:px-8",
           scrolled ? "bg-background/80 backdrop-blur-md" : "bg-background"
         )}
         style={{ borderColor: "rgb(255 255 255 / 0.06)" }}
@@ -102,7 +114,7 @@ export default function PageShell({
         )}
       </div>
 
-      <div className="px-5 md:px-8 py-5 w-full">{children}</div>
+      <div className="relative z-10 px-5 md:px-8 py-5 w-full">{children}</div>
     </div>
   )
 }

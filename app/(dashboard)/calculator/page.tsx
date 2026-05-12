@@ -170,7 +170,7 @@ function CalculatorContent() {
   }
 
   return (
-    <PageShell title="Calculator" subtitle="MAO & assignment fee"
+    <PageShell accent="green" title="Calculator" subtitle="MAO & assignment fee"
       back={!!leadId}
       action={leadId ? (
         <button onClick={saveToLead}
@@ -185,7 +185,7 @@ function CalculatorContent() {
 
         {/* inputs */}
         <div className="flex flex-col gap-5">
-          <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <div className="rounded-2xl border p-5" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
             <h2 className="text-xs font-bold tracking-widest uppercase mb-4" style={{ color: "var(--muted-foreground)" }}>
               Property Numbers
             </h2>
@@ -254,7 +254,7 @@ function CalculatorContent() {
             </div>
           </div>
 
-          <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <div className="rounded-2xl border p-5" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
             <h2 className="text-xs font-bold tracking-widest uppercase mb-4" style={{ color: "var(--muted-foreground)" }}>
               Deal Parameters
             </h2>
@@ -408,7 +408,7 @@ function CalculatorContent() {
           )}
 
           {/* breakdown */}
-          <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <div className="rounded-2xl border p-5" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
             <h2 className="text-xs font-bold tracking-widest uppercase mb-4" style={{ color: "var(--muted-foreground)" }}>
               Cost Breakdown
             </h2>

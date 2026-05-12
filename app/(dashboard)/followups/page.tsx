@@ -106,7 +106,7 @@ export default function FollowupsPage() {
   };
 
   return (
-    <PageShell title="Follow-ups" subtitle="Tasks & reminders"
+    <PageShell accent="amber" title="Follow-ups" subtitle="Tasks & reminders"
       action={
         <button onClick={() => setShowModal(true)}
           className="flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-sm"

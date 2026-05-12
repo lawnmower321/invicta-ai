@@ -120,9 +120,9 @@ function CompsContent() {
   const suggestedArv = avgPrice ? Math.round(avgPrice * 0.97) : 0;
 
   return (
-    <PageShell title="Comps Tool" subtitle="Pull comparable sales">
+    <PageShell accent="purple" title="Comps Tool" subtitle="Pull comparable sales">
       {/* search bar */}
-      <div className="rounded-2xl border p-5 mb-6" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="rounded-2xl border p-5 mb-6" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
         <div className="flex gap-3 flex-wrap">
           <div className="flex-1 min-w-[260px] relative">
             <MapPin size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2"
@@ -194,7 +194,7 @@ function CompsContent() {
             ))}
           </div>
 
-          <div className="rounded-2xl border overflow-hidden" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <div className="rounded-2xl border overflow-hidden" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
             <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "var(--border)" }}>
               <h2 className="font-bold">Comparable Sales</h2>
               <div className="flex items-center gap-2 text-xs" style={{ color: "var(--muted-foreground)" }}>

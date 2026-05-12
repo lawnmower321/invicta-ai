@@ -81,7 +81,7 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <PageShell title="Analytics" subtitle="Live from your pipeline">
+    <PageShell accent="blue" title="Analytics" subtitle="Live from your pipeline">
       <div>
       {/* team KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
@@ -92,7 +92,7 @@ export default function AnalyticsPage() {
           { label: "Deals Closed",    value: String(totalClosed),                                     color: "var(--invicta-purple)", icon: Zap },
         ].map(({ label, value, color, icon: Icon }) => (
           <div key={label} className="rounded-2xl border p-4 flex items-center gap-4"
-            style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+            data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
             <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: `${color}15` }}>
               <Icon size={18} style={{ color }} />
@@ -109,7 +109,7 @@ export default function AnalyticsPage() {
         {/* per-user breakdown */}
         {userStats.length === 0 ? (
           <div className="col-span-2 rounded-2xl border p-10 flex flex-col items-center justify-center"
-            style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+            data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
             <TrendingUp size={32} className="mb-3 opacity-30" />
             <p className="font-bold">No data yet</p>
             <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>
@@ -184,7 +184,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* pipeline funnel */}
-      <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="rounded-2xl border p-5" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
         <h2 className="font-bold mb-1">Team Pipeline Funnel</h2>
         <p className="text-xs mb-5" style={{ color: "var(--muted-foreground)" }}>All leads across both users</p>
         <div className="flex flex-col gap-3">

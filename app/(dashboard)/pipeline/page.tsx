@@ -6,7 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import {
   Plus, MapPin, User, ArrowUpRight,
   X, RotateCcw, Loader2, Inbox, ExternalLink,
-  Pencil, Check, Trash2,
+  Pencil, Check, Trash2, AlertCircle,
 } from "lucide-react";
 
 const supabase = createClient();
@@ -51,6 +51,7 @@ export default function PipelinePage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [dragging, setDragging] = useState<string | null>(null);
   const [overCol, setOverCol] = useState<string | null>(null);
   const [overPool, setOverPool] = useState(false);
@@ -137,7 +138,8 @@ export default function PipelinePage() {
   async function addLead() {
     if (!form.address.trim()) return;
     setSaving(true);
-    await supabase.from("leads").insert({
+    setSaveError("");
+    const { error } = await supabase.from("leads").insert({
       address: form.address.trim(),
       owner_name: form.owner_name.trim() || null,
       phone: form.phone.trim() || null,
@@ -147,9 +149,11 @@ export default function PipelinePage() {
       stage: "new",
       assigned_to: null,
     });
+    setSaving(false);
+    if (error) { setSaveError(error.message); return; }
+    await fetchLeads();
     setForm(EMPTY_FORM);
     setShowModal(false);
-    setSaving(false);
   }
 
   // drag handlers
@@ -207,6 +211,13 @@ export default function PipelinePage() {
   return (
     <div className="fixed top-14 md:top-0 bottom-[72px] md:bottom-0 left-0 md:left-[220px] right-0 flex flex-col overflow-hidden"
       style={{ background: "var(--background)" }}>
+      {/* Ambient glow — green dominant (deal momentum) */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <div className="absolute -top-48 -right-24 w-[500px] h-[500px] rounded-full blur-[140px]"
+          style={{ background: "var(--invicta-green)", opacity: 0.06 }} />
+        <div className="absolute -bottom-48 -left-24 w-[400px] h-[400px] rounded-full blur-[120px]"
+          style={{ background: "var(--invicta-green)", opacity: 0.04 }} />
+      </div>
 
       {/* ── MOBILE: Tab + List ── */}
       <div className="flex flex-col flex-1 md:hidden overflow-hidden">
@@ -249,7 +260,7 @@ export default function PipelinePage() {
                 {poolEditMode ? <><Check size={11} />Done</> : <><Pencil size={11} />Edit</>}
               </button>
               {!poolEditMode && (
-                <button onClick={() => setShowModal(true)}
+                <button onClick={() => { setSaveError(""); setShowModal(true); }}
                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold"
                   style={{ background: "var(--invicta-blue)20", color: "var(--invicta-blue)" }}>
                   <Plus size={11} /> Add
@@ -400,7 +411,7 @@ export default function PipelinePage() {
               {poolEditMode ? "Tap the trash icon to remove a lead" : "Drag into pipeline to claim · click to preview"}
             </p>
             {!poolEditMode && (
-              <button onClick={() => setShowModal(true)}
+              <button onClick={() => { setSaveError(""); setShowModal(true); }}
                 className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-xl font-bold text-xs transition-all hover:opacity-90"
                 style={{ background: "var(--invicta-blue)20", color: "var(--invicta-blue)", border: "1px dashed var(--invicta-blue)50" }}>
                 <Plus size={13} /> Add to Pool
@@ -705,6 +716,12 @@ export default function PipelinePage() {
                 </div>
               </div>
             </div>
+            {saveError && (
+              <div className="flex items-center gap-2 text-xs mt-4 p-3 rounded-xl"
+                style={{ background: "var(--invicta-red)10", color: "var(--invicta-red)" }}>
+                <AlertCircle size={13} />{saveError}
+              </div>
+            )}
             <div className="flex gap-3 mt-6">
               <button onClick={() => setShowModal(false)}
                 className="flex-1 py-2.5 rounded-xl font-bold text-sm"

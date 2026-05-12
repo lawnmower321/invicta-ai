@@ -316,7 +316,7 @@ export default function LearnPage() {
     : null;
 
   return (
-    <PageShell title="Learn" subtitle="Wholesale real estate glossary">
+    <PageShell accent="blue" title="Learn" subtitle="Wholesale real estate glossary">
       {/* search */}
       <div className="relative mb-6">
         <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2"
@@ -324,7 +324,7 @@ export default function LearnPage() {
         <input type="text" value={query} onChange={e => setQuery(e.target.value)}
           placeholder="Search terms — ARV, lis pendens, assignment fee..."
           className="w-full pl-11 pr-4 py-3 rounded-xl border text-sm outline-none"
-          style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--foreground)", fontFamily: "inherit" }}
+          style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)", color: "var(--foreground)", fontFamily: "inherit" }}
           onFocus={e => (e.target.style.borderColor = "var(--invicta-green)")}
           onBlur={e => (e.target.style.borderColor = "var(--border)")}
         />

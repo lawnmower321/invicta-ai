@@ -50,7 +50,7 @@ export function KpiCard({
   const isFeature = variant === "feature"
 
   const cardClasses = cn(
-    "block w-full h-full border transition-all duration-150 ease-out",
+    "block w-full h-full border backdrop-blur-md transition-all duration-150 ease-out",
     isFeature ? "p-5 rounded-2xl" : "p-4 rounded-xl border-white/[0.08]",
     href && "hover:-translate-y-px hover:border-white/[0.16] cursor-pointer"
   )
@@ -61,7 +61,7 @@ export function KpiCard({
         backgroundColor: tok.soft,
         boxShadow: `inset 0 0 0 1px ${tok.border}, 0 0 24px -8px ${tok.glow}`,
       }
-    : {}
+    : { background: "var(--surface-glass)" }
 
   const trendColor =
     !trend

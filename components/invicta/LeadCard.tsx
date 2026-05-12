@@ -60,11 +60,11 @@ function PoolVariant(props: LeadCardProps) {
     <div
       onClick={() => onClick?.(lead.id)}
       className={cn(
-        "relative p-3 rounded-xl border border-white/[0.08] transition-all duration-150 ease-out cursor-pointer",
+        "relative p-3 rounded-xl border border-white/[0.08] backdrop-blur-md transition-all duration-150 ease-out cursor-pointer",
         "hover:-translate-y-px hover:border-white/[0.16]",
         dragging && "opacity-40 scale-[1.02]"
       )}
-      style={{ borderLeft: `3px solid ${tok.solid}`, ...selectionRing(tok, selected) }}
+      style={{ borderLeft: `3px solid ${tok.solid}`, background: "var(--surface-glass)", ...selectionRing(tok, selected) }}
       title={lead.address}
     >
       <div className="text-sm font-bold truncate">{lead.address}</div>
@@ -91,11 +91,12 @@ function KanbanVariant(props: LeadCardProps) {
     <div
       onClick={() => onClick?.(lead.id)}
       className={cn(
-        "relative group p-3 rounded-xl border border-white/[0.08] transition-all duration-150 ease-out cursor-pointer",
+        "relative group p-3 rounded-xl border border-white/[0.08] backdrop-blur-md transition-all duration-150 ease-out cursor-pointer",
         "hover:-translate-y-px hover:border-white/[0.16]",
         dragging && "opacity-40 scale-[1.02]"
       )}
       style={{
+        background: "var(--surface-glass)",
         borderLeft: `3px solid ${tok.solid}`,
         boxShadow:
           selected && dragging
@@ -152,10 +153,10 @@ function ScoredVariant(props: LeadCardProps) {
     <div
       onClick={() => onClick?.(lead.id)}
       className={cn(
-        "p-4 rounded-xl border transition-all duration-150 ease-out cursor-pointer",
+        "p-4 rounded-xl border backdrop-blur-md transition-all duration-150 ease-out cursor-pointer",
         "hover:-translate-y-px hover:border-white/[0.16]"
       )}
-      style={{ borderColor: tok.border, ...selectionRing(tok, selected) }}
+      style={{ borderColor: tok.border, background: "var(--surface-glass)", ...selectionRing(tok, selected) }}
       title={lead.address}
     >
       <div className="flex items-start gap-3">

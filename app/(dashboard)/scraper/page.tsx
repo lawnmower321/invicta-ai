@@ -249,7 +249,7 @@ export default function ScraperPage() {
   const addedCount = scored.filter(l => l.added).length;
 
   return (
-    <PageShell title="Lead Import" subtitle="Upload, score, and prioritize"
+    <PageShell accent="red" title="Lead Import" subtitle="Upload, score, and prioritize"
       action={
         <button onClick={openHistory}
           className="flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-sm transition-all"
@@ -278,7 +278,7 @@ export default function ScraperPage() {
       {/* paste mode */}
       {mode === "paste" && !showResults && (
         <div className="flex flex-col gap-4">
-          <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <div className="rounded-2xl border p-5" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
             <h2 className="font-bold mb-1">Paste anything</h2>
             <p className="text-xs mb-4" style={{ color: "var(--muted-foreground)" }}>
               Ctrl+A → Ctrl+C a Zillow FSBO page, Facebook group post, Craigslist listing, or any text with property info. Claude extracts addresses, names, and phone numbers automatically.
@@ -363,7 +363,7 @@ export default function ScraperPage() {
 
       {step === "map" && mode === "csv" && (
         <div className="flex flex-col gap-5">
-          <div className="rounded-2xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <div className="rounded-2xl border p-5" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="font-bold">Map Your Columns</h2>
@@ -402,7 +402,7 @@ export default function ScraperPage() {
           </div>
 
           {/* preview */}
-          <div className="rounded-2xl border overflow-hidden" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <div className="rounded-2xl border overflow-hidden" data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
             <div className="px-4 py-3 border-b" style={{ borderColor: "var(--border)" }}>
               <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--muted-foreground)" }}>
                 Preview (first 3 rows)
@@ -439,7 +439,7 @@ export default function ScraperPage() {
         <div className="flex flex-col gap-4">
           {/* summary bar */}
           <div className="rounded-2xl border p-4 flex items-center justify-between flex-wrap gap-3"
-            style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+            data-glass style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)" }}>
             <div className="flex items-center gap-4">
               {(["high", "medium", "low"] as const).map(p => (
                 <div key={p} className="flex items-center gap-1.5">
@@ -495,7 +495,7 @@ export default function ScraperPage() {
               const cfg = PRIORITY_CONFIG[lead.priority];
               return (
                 <div key={lead.id} className="rounded-2xl border p-4 flex items-start gap-4"
-                  style={{ background: "var(--surface)", borderColor: "var(--border)", opacity: lead.added ? 0.6 : 1 }}>
+                  style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)", opacity: lead.added ? 0.6 : 1 }}>
                   {/* score badge */}
                   <div className="w-11 h-11 rounded-xl flex-shrink-0 flex items-center justify-center font-bold text-lg"
                     style={{ background: cfg.bg, color: cfg.color }}>
