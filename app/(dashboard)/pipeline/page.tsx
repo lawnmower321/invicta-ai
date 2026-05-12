@@ -500,7 +500,7 @@ export default function PipelinePage() {
           <div className="px-6 pt-6 pb-4 flex items-center justify-between flex-shrink-0 border-b"
             style={{ borderColor: "var(--border)" }}>
             <div>
-              <h1 className="text-xl font-bold tracking-wide">My Pipeline</h1>
+              <h1 className="text-xl font-bold">My Pipeline</h1>
               <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
                 {mine.length} leads · {totalValue > 0 ? fmt(totalValue) + " ask value" : "no value yet"}
               </p>

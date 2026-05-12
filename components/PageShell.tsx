@@ -85,7 +85,7 @@ export default function PageShell({
                   {eyebrow}
                 </div>
               )}
-              <h1 className="font-bold text-xl md:text-2xl tracking-tight leading-tight truncate">
+              <h1 className="font-bold text-xl md:text-2xl truncate">
                 {title}
               </h1>
               {subtitle && (

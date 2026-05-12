@@ -202,7 +202,7 @@ function ScoredVariant(props: LeadCardProps) {
         <div className="mt-3 pt-3 border-t border-white/[0.06] flex items-start gap-2">
           <span aria-hidden="true">💡</span>
           <div className="text-xs flex-1" style={{ color: accentToken("amber").fg }}>
-            <span className="font-semibold uppercase tracking-[0.08em] text-[10px] mr-1">Mentor:</span>
+            <span className="font-semibold uppercase tracking-[0.12em] text-[10px] mr-1">Mentor:</span>
             {lead.mentor_note}
           </div>
           <button
@@ -253,7 +253,7 @@ function ActionButton({ label, hint, onClick }: { label: string; hint?: string; 
         e.stopPropagation()
         onClick()
       }}
-      className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-[0.08em] border border-white/[0.12] hover:bg-white/[0.08]"
+      className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-[0.12em] border border-white/[0.12] hover:bg-white/[0.08]"
     >
       <span>{label}</span>
       {hint && <span className="opacity-50">{hint}</span>}

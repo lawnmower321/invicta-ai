@@ -57,7 +57,7 @@ export default function LoginPage() {
               style={{ background: "var(--invicta-green)" }}>
               <span className="text-black font-bold text-sm">I</span>
             </div>
-            <span className="text-2xl font-bold tracking-wide" style={{ fontFamily: "'Play', sans-serif" }}>
+            <span className="text-2xl font-bold" style={{ fontFamily: "var(--font-heading)", letterSpacing: "-0.02em" }}>
               INVICTA
             </span>
             <span className="text-xs px-1.5 py-0.5 rounded font-bold tracking-widest"

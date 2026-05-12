@@ -100,7 +100,7 @@ export default function DashboardPage() {
         >
           <p className="text-xs font-bold tracking-widest uppercase mb-1"
             style={{ color: "var(--muted-foreground)" }}>Command Center</p>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{displayName}</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">{displayName}</h1>
         </motion.div>
 
         {/* KPI row — staggered entrance */}

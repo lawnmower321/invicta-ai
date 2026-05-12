@@ -25,7 +25,7 @@ export default function DevComponentsPage() {
         <div className="text-[10px] tracking-[0.18em] opacity-60 uppercase font-bold mb-1">
           Development
         </div>
-        <h1 className="text-2xl font-bold tracking-tight">Component Reference</h1>
+        <h1 className="text-2xl font-bold">Component Reference</h1>
         <p className="text-xs text-muted-foreground mt-1">
           Visual reference for every shared component variant in <code>components/invicta/</code>.
           Hidden in production via <code>NODE_ENV</code> guard.

@@ -42,7 +42,7 @@ export function StatBadge({
   return (
     <span
       className={cn(
-        "font-bold uppercase tracking-[0.08em] inline-flex items-center gap-1 whitespace-nowrap",
+        "font-bold uppercase tracking-[0.12em] inline-flex items-center gap-1 whitespace-nowrap",
         SIZE_CLASSES[size]
       )}
       style={style}
