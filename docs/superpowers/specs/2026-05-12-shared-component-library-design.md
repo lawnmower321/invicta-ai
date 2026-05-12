@@ -127,6 +127,8 @@ Business logic — thresholds and ranges — externalized from UI. When AI scori
 
 **Inheritance mechanism:** `SectionHeader` and `EmptyState` accept `accent?: AccentColor` (optional). When the prop is omitted or `undefined`, the component reads its accent values from `var(--page-accent)` directly via inline style (e.g., `color: var(--page-accent, var(--invicta-green))` with a green fallback when no `PageShell` wraps the component). When the prop is explicitly set — including `accent="neutral"` — the local prop wins. This is intentional: passing `neutral` is an explicit override, not an opt-out.
 
+**Spinner is NOT in the inheritance list.** Spinner inherits `currentColor` from its parent text-color context (button foreground, card body color, etc.). See §4.6 for the rationale.
+
 Consumers can always override locally. This implements the "one dominant color per page" rule from the audit at the architecture level.
 
 **CLAUDE.md addition** (single new line under Architecture Rules):
@@ -396,21 +398,78 @@ type EmptyStateProps = {
 **Props:**
 ```ts
 type SpinnerProps = {
-  size?: 'xs' | 'sm' | 'md' | 'lg'      // 12 / 16 / 20 / 24px
-  accent?: AccentColor                  // default 'neutral'; inherits var(--page-accent) when neutral
+  size?: 'xs' | 'sm' | 'md' | 'lg'      // default 'sm'
+  accent?: AccentColor                  // optional override; default uses currentColor
   label?: string                        // optional inline label, text-xs muted
+  className?: string                    // passthrough for layout/positioning
 }
 ```
 
-**Visual:**
-- Wraps `Loader2` from lucide-react with `animate-spin`
-- Color: `accent.fg`
-- Optional label renders inline to the right, `text-xs text-muted-foreground`
-- When label is present, container is `inline-flex items-center gap-2`
+**Size scale — locked pixel values:**
+
+| Size | Pixels | Purpose |
+|------|--------|---------|
+| `xs` | 12px | Inline with small text, condensed list rows, badge-adjacent contexts |
+| `sm` | 16px | **Default.** Inside buttons, form fields, standard inline contexts |
+| `md` | 20px | Card-level loading (e.g., AI generation card, drawer fetch) |
+| `lg` | 24px | Page-level loading replacement (centered, no surrounding chrome) |
+
+Values match Lucide's standard icon vocabulary (16/20/24) so the spinner reads visually consistent with adjacent icons.
+
+**Color behavior — `currentColor` by default:**
+
+Spinner is the **only** component in the library that does NOT inherit `var(--page-accent)`. It inherits `currentColor` from its parent text-color context instead. Spinners are almost always embedded inside elements with their own color context (buttons, cards, destructive actions); forcing the page accent would mismatch.
+
+```
+accent prop omitted   → currentColor (inherit parent text color)
+accent="neutral"      → text-muted-foreground (explicit subtle)
+accent="green" etc.   → accent(color).fg (explicit override)
+```
+
+Examples:
+- Inside a green "Save" button → spinner is green (button's foreground)
+- Inside a neutral muted button → spinner is muted
+- Inside a destructive red button → spinner is red
+- `accent="purple"` explicitly → spinner is purple regardless of parent
+
+**Implementation:**
+- Wraps `Loader2` from `lucide-react` with Tailwind's `motion-safe:animate-spin` class
+- `motion-safe` variant respects `prefers-reduced-motion: reduce` — users with reduced motion get a static icon, not a rotating one
+- Label (when present) renders inline to the right, `text-xs text-muted-foreground`
+- Container with label: `inline-flex items-center gap-2`
+
+**Accessibility:**
+- `aria-hidden="true"` on the `Loader2` icon — purely decorative
+- Always-rendered `sr-only` element announces "Loading" or the explicit `label` to screen readers
+- Reduced-motion handled via `motion-safe:` Tailwind variant
+
+**Where it appears (enumerated from audit):**
+
+Button-internal (`size="sm"` default):
+- Calculator → "Get AI Offer" button
+- Lead Detail → "Generate Campaign" button
+- Scraper → "Score Leads" / CSV processing button
+- Settings → "Save Changes" buttons during submit
+- Comps → search button
+- Pipeline / Followups / Buyers → all submit buttons in add-modals
+- Call Center → "Log Call" button
+
+Card-level (`size="md"`):
+- Lead Detail → Buyer Campaign card during AI generation
+- Calculator → Quick Offer results card while waiting on AI
+- Comps → results section while fetching Rentcast
+
+Page-level (`size="lg"`):
+- Analytics page-level loader (currently inline `Loader2 size={24}`)
+- Any future page-level initial-data loading state
+
+With inline label:
+- "Generating campaign..." in Buyer Campaign card
+- "Scoring leads..." during Scraper batch processing
+- "Searching..." in Comps while Rentcast resolves
 
 **Replaces:**
-- Every existing `<Loader2 size={X} className="animate-spin" style={{ color: ... }} />` instance
-- Page-level loaders (e.g., the Analytics full-screen loader) become `<Spinner size="lg" />` centered
+Every existing `<Loader2 size={X} className="animate-spin" style={{ color: ... }} />` instance across pages.
 
 ## 5. PageShell update
 
