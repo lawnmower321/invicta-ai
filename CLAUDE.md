@@ -112,6 +112,7 @@ Dark theme is default. Never assume light mode.
 - Rentcast comps are cached in-memory for 24h — do NOT re-fetch on every render
 - No global state — local React hooks + Supabase subscriptions only
 - All Supabase calls in server actions or API routes — never expose service key client-side
+- Page-level accent flows via `--page-accent` (set by `PageShell`). Nested `SectionHeader` and `EmptyState` inherit it by default unless overridden. `Spinner` is the one exception — it inherits `currentColor` from its parent context (button text, body, etc.) so it works inside arbitrary containers.
 
 ---
 
@@ -218,6 +219,12 @@ POST /api/buyer-campaign → claude-sonnet-4-6
 - Server Components by default — only add `"use client"` when you need hooks or browser APIs
 - Prefer `async/await` over `.then()` chains
 - Error boundaries on all major page sections
+
+---
+
+## Development utilities
+
+- `/dev/components` (dev-only route, hidden in production via `NODE_ENV` guard) is the visual reference for every shared component variant in `components/invicta/`. When adding a new variant or component, update this route so the variant has a documented visual sample. This route is how design regressions get caught before they hit real pages.
 
 ---
 
