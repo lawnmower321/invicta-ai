@@ -6,7 +6,8 @@ import { PriorityBadge } from "@/components/invicta/badges/PriorityBadge"
 import { SourceBadge } from "@/components/invicta/badges/SourceBadge"
 import { SpreadBadge } from "@/components/invicta/badges/SpreadBadge"
 import { ScoreBadge } from "@/components/invicta/badges/ScoreBadge"
-import { Radio } from "lucide-react"
+import { Radio, DollarSign, Users, Inbox, Target } from "lucide-react"
+import { KpiCard, KpiGrid } from "@/components/invicta/KpiCard"
 
 export default function DevComponentsPage() {
   if (process.env.NODE_ENV === "production") notFound()
@@ -104,6 +105,29 @@ export default function DevComponentsPage() {
               <ScoreBadge score={3} />
             </div>
           </div>
+        </section>
+
+        <section>
+          <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground pb-2 mb-3 border-b border-white/[0.06]">
+            KpiCard — default (4-up grid)
+          </h2>
+          <KpiGrid cols={4}>
+            <KpiCard label="Pipeline Value" value={124000} format="currency" icon={DollarSign} accent="green" trend={{ dir: "up", value: "+12%" }} />
+            <KpiCard label="Active Leads"   value={47}     icon={Users}      accent="blue"  trend={{ dir: "flat", value: "no change" }} />
+            <KpiCard label="In Pool"        value={132}    icon={Inbox}      accent="amber" trend={{ dir: "down", value: "-4" }} />
+            <KpiCard label="Deals Closed"   value={9}      icon={Target}     accent="purple" hint="this quarter" />
+          </KpiGrid>
+        </section>
+
+        <section>
+          <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground pb-2 mb-3 border-b border-white/[0.06]">
+            KpiCard — feature variant + loading + href
+          </h2>
+          <KpiGrid cols={3}>
+            <KpiCard label="Suggested ARV" value={245000} format="currency" icon={DollarSign} accent="green" variant="feature" />
+            <KpiCard label="Loading State" value={0} loading accent="purple" />
+            <KpiCard label="Clickable" value={"Pipeline →"} accent="blue" href="/pipeline" />
+          </KpiGrid>
         </section>
       </main>
     </div>
