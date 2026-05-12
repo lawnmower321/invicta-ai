@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation"
+import { LeadCard, LeadCardSkeleton } from "@/components/invicta/LeadCard"
+import type { Lead } from "@/components/invicta/types"
 import { Spinner } from "@/components/invicta/Spinner"
 import { StatBadge } from "@/components/invicta/StatBadge"
 import { StageBadge } from "@/components/invicta/badges/StageBadge"
@@ -176,6 +178,69 @@ export default function DevComponentsPage() {
             <EmptyResults query="123 elm" />
             <EmptyPipeline stage="qualified" />
           </div>
+        </section>
+
+        <section>
+          <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground pb-2 mb-3 border-b border-white/[0.06]">
+            LeadCard — variants
+          </h2>
+          {(() => {
+            const lead: Lead = {
+              id: "demo-1",
+              address: "1234 Elm St, Austin TX",
+              owner_name: "John Smith",
+              phone: "(512) 555-0100",
+              ask_price: 185000,
+              arv: 245000,
+              repair_est: 18000,
+              source: "Zillow",
+              stage: "qualified",
+              score: 9,
+              priority: "high",
+              mentor_note: "Lead with motivation — ask why they're selling.",
+            }
+            const leadNoMentor: Lead = { ...lead, id: "demo-2", mentor_note: null, score: 6, priority: "medium" }
+            return (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="text-xs text-muted-foreground">pool</div>
+                  <LeadCard lead={lead} variant="pool" />
+                </div>
+                <div className="space-y-2">
+                  <div className="text-xs text-muted-foreground">kanban (with showActions)</div>
+                  <LeadCard lead={lead} variant="kanban" showActions />
+                </div>
+                <div className="space-y-2">
+                  <div className="text-xs text-muted-foreground">scored — with mentor note</div>
+                  <LeadCard lead={lead} variant="scored" />
+                </div>
+                <div className="space-y-2">
+                  <div className="text-xs text-muted-foreground">scored — mentor note null (row collapses)</div>
+                  <LeadCard lead={leadNoMentor} variant="scored" />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <div className="text-xs text-muted-foreground">compact (call-center dropdown row)</div>
+                  <LeadCard lead={lead} variant="compact" />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <div className="text-xs text-muted-foreground">selected + dragging states</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <LeadCard lead={lead} variant="kanban" selected />
+                    <LeadCard lead={lead} variant="kanban" dragging />
+                  </div>
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <div className="text-xs text-muted-foreground">skeletons</div>
+                  <div className="grid grid-cols-4 gap-2">
+                    <LeadCardSkeleton variant="pool" />
+                    <LeadCardSkeleton variant="kanban" />
+                    <LeadCardSkeleton variant="scored" />
+                    <LeadCardSkeleton variant="compact" />
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
         </section>
       </main>
     </div>
