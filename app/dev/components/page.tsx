@@ -8,6 +8,7 @@ import { SpreadBadge } from "@/components/invicta/badges/SpreadBadge"
 import { ScoreBadge } from "@/components/invicta/badges/ScoreBadge"
 import { Radio, DollarSign, Users, Inbox, Target } from "lucide-react"
 import { KpiCard, KpiGrid } from "@/components/invicta/KpiCard"
+import { SectionHeader } from "@/components/invicta/SectionHeader"
 
 export default function DevComponentsPage() {
   if (process.env.NODE_ENV === "production") notFound()
@@ -128,6 +129,26 @@ export default function DevComponentsPage() {
             <KpiCard label="Loading State" value={0} loading accent="purple" />
             <KpiCard label="Clickable" value={"Pipeline →"} accent="blue" href="/pipeline" />
           </KpiGrid>
+        </section>
+        <section>
+          <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground pb-2 mb-3 border-b border-white/[0.06]">
+            SectionHeader
+          </h2>
+          <div className="space-y-6">
+            <SectionHeader title="Team Performance" count={4} />
+            <SectionHeader title="Property Numbers" eyebrow="Workspace" hint="all values are live" />
+            <SectionHeader
+              title="Filters"
+              count={12}
+              accent="purple"
+              action={<button className="text-xs px-2 py-1 rounded-md border border-white/[0.08]">+ Add</button>}
+            />
+            <SectionHeader title="Compact" size="sm" />
+            <div style={{ "--page-accent": "var(--invicta-amber)" } as React.CSSProperties}>
+              <SectionHeader title="Inherits Amber" count={7} />
+            </div>
+            <SectionHeader title="No Divider" count={3} divider={false} />
+          </div>
         </section>
       </main>
     </div>
