@@ -145,15 +145,8 @@ body::after {
   transform: translate3d(0, 0, 0);
 }
 
-/* Page fade-in */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-main > * {
-  animation: fadeUp 0.2s ease forwards;
-}
+/* Page fade-in is now handled by Framer Motion via app/(dashboard)/template.tsx.
+   Individual entrance animations live in the shared lib/animations.ts variants. */
 
 /* Glass card depth — add data-glass to any section card container.
    The CSS handles blur without needing a Tailwind class on every element. */

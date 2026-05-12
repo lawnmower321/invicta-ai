@@ -8,6 +8,7 @@ import {
   History, Trash2, X, SquareCheck, Square,
 } from "lucide-react";
 import PageShell from "@/components/PageShell";
+import { motion } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 
 const supabase = createClient();
@@ -497,9 +498,17 @@ export default function ScraperPage() {
                 <div key={lead.id} className="rounded-2xl border p-4 flex items-start gap-4"
                   style={{ background: "var(--surface-glass)", borderColor: "rgb(255 255 255 / 0.08)", opacity: lead.added ? 0.6 : 1 }}>
                   {/* score badge */}
-                  <div className="w-11 h-11 rounded-xl flex-shrink-0 flex items-center justify-center font-bold text-lg"
+                  <div className="relative w-11 h-11 rounded-xl flex-shrink-0 flex items-center justify-center font-bold text-lg"
                     style={{ background: cfg.bg, color: cfg.color }}>
                     {lead.score}
+                    {lead.priority === "high" && !lead.added && (
+                      <motion.div
+                        className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full"
+                        style={{ background: "var(--invicta-green)" }}
+                        animate={{ scale: [1, 1.5, 1], opacity: [1, 0.3, 1] }}
+                        transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+                      />
+                    )}
                   </div>
 
                   <div className="flex-1 min-w-0">

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Search, BookOpen, ChevronDown, ChevronUp } from "lucide-react";
+import { motion } from "framer-motion";
 import PageShell from "@/components/PageShell";
 
 type Term = {
@@ -264,8 +265,14 @@ const CATEGORIES: Category[] = [
 function TermCard({ term }: { term: Term }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-2xl border transition-all"
-      style={{ background: "var(--surface)", borderColor: open ? "var(--invicta-green)40" : "var(--border)" }}>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-40px" }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+      className="rounded-2xl border transition-colors"
+      style={{ background: "var(--surface)", borderColor: open ? "var(--invicta-green)40" : "var(--border)" }}
+    >
       <button onClick={() => setOpen(o => !o)}
         className="w-full px-5 py-4 flex items-start justify-between gap-3 text-left">
         <div className="flex-1">
@@ -297,7 +304,7 @@ function TermCard({ term }: { term: Term }) {
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 

@@ -1,7 +1,17 @@
+"use client"
+
 import Link from "next/link"
+import { useEffect } from "react"
 import { TrendingUp, TrendingDown, Minus, type LucideIcon } from "lucide-react"
+import {
+  motion,
+  useMotionValue,
+  useTransform,
+  animate,
+} from "framer-motion"
 import { cn } from "@/lib/utils"
 import { accent as accentToken } from "./tokens"
+import { fadeUp, staggerContainer, cardHoverY, quickTransition } from "@/lib/animations"
 import type { AccentColor } from "./types"
 
 type KpiCardFormat = "currency" | "number" | "percent" | "raw"
@@ -22,17 +32,28 @@ type KpiCardProps = {
 function formatValue(value: string | number, format: KpiCardFormat): string {
   if (typeof value === "string") return value
   switch (format) {
-    case "currency":
-      return `$${value.toLocaleString()}`
-    case "percent":
-      return `${value}%`
-    case "number":
-      return value.toLocaleString()
+    case "currency": return `$${value.toLocaleString()}`
+    case "percent":  return `${value}%`
+    case "number":   return value.toLocaleString()
     case "raw":
-    default:
-      return String(value)
+    default:         return String(value)
   }
 }
+
+// Count-up for numeric KPI values — animates from 0 to the target on mount/change.
+function CountUp({ value, format }: { value: number; format: KpiCardFormat }) {
+  const motionValue = useMotionValue(0)
+  const display = useTransform(motionValue, v => formatValue(Math.round(v), format))
+
+  useEffect(() => {
+    const controls = animate(motionValue, value, { duration: 0.7, ease: "easeOut" })
+    return controls.stop
+  }, [value, motionValue])
+
+  return <motion.span>{display}</motion.span>
+}
+
+const MotionLink = motion(Link)
 
 export function KpiCard({
   label,
@@ -49,10 +70,11 @@ export function KpiCard({
   const tok = accentToken(accentName)
   const isFeature = variant === "feature"
 
+  // CSS hover:border is kept; translate is handled by whileHover below.
   const cardClasses = cn(
-    "block w-full h-full border backdrop-blur-md transition-all duration-150 ease-out",
+    "block w-full h-full border backdrop-blur-md",
     isFeature ? "p-5 rounded-2xl" : "p-4 rounded-xl border-white/[0.08]",
-    href && "hover:-translate-y-px hover:border-white/[0.16] cursor-pointer"
+    href && "hover:border-white/[0.16] cursor-pointer"
   )
 
   const cardStyle: React.CSSProperties = isFeature
@@ -64,19 +86,14 @@ export function KpiCard({
     : { background: "var(--surface-glass)" }
 
   const trendColor =
-    !trend
-      ? undefined
-      : trend.dir === "up"
-      ? "var(--invicta-green)"
-      : trend.dir === "down"
-      ? "var(--invicta-red)"
-      : "var(--muted-foreground)"
-  const TrendIcon: LucideIcon | null = !trend
-    ? null
-    : trend.dir === "up"
-    ? TrendingUp
-    : trend.dir === "down"
-    ? TrendingDown
+    !trend ? undefined
+    : trend.dir === "up"   ? "var(--invicta-green)"
+    : trend.dir === "down" ? "var(--invicta-red)"
+    : "var(--muted-foreground)"
+  const TrendIcon: LucideIcon | null =
+    !trend ? null
+    : trend.dir === "up"   ? TrendingUp
+    : trend.dir === "down" ? TrendingDown
     : Minus
 
   const content = (
@@ -96,8 +113,14 @@ export function KpiCard({
           aria-label="Loading"
         />
       ) : (
-        <div className={cn("font-mono tabular-nums font-bold leading-none", isFeature ? "text-4xl" : "text-3xl")}>
-          {formatValue(value, format)}
+        <div className={cn(
+          "font-mono tabular-nums font-bold leading-none",
+          isFeature ? "text-4xl" : "text-3xl"
+        )}>
+          {typeof value === "number"
+            ? <CountUp value={value} format={format} />
+            : formatValue(value, format)
+          }
         </div>
       )}
       {trend && !loading && (
@@ -106,21 +129,29 @@ export function KpiCard({
           <span>{trend.value}</span>
         </div>
       )}
-      {hint && !loading && <div className="text-xs text-muted-foreground mt-1">{hint}</div>}
+      {hint && !loading && (
+        <div className="text-xs text-muted-foreground mt-1">{hint}</div>
+      )}
     </>
   )
 
+  const motionProps = {
+    variants: fadeUp,
+    whileHover: cardHoverY,
+    transition: quickTransition,
+  }
+
   if (href) {
     return (
-      <Link href={href} className={cardClasses} style={cardStyle}>
+      <MotionLink href={href} className={cardClasses} style={cardStyle} {...motionProps}>
         {content}
-      </Link>
+      </MotionLink>
     )
   }
   return (
-    <div className={cardClasses} style={cardStyle}>
+    <motion.div className={cardClasses} style={cardStyle} {...motionProps}>
       {content}
-    </div>
+    </motion.div>
   )
 }
 
@@ -135,6 +166,16 @@ const COLS: Record<NonNullable<KpiGridProps["cols"]>, string> = {
   4: "md:grid-cols-4",
 }
 
+// KpiGrid is the stagger container — children (KpiCards) inherit the fadeUp variant.
 export function KpiGrid({ cols = 4, children }: KpiGridProps) {
-  return <div className={cn("grid grid-cols-2 gap-3 auto-rows-fr", COLS[cols])}>{children}</div>
+  return (
+    <motion.div
+      className={cn("grid grid-cols-2 gap-3 auto-rows-fr", COLS[cols])}
+      variants={staggerContainer}
+      initial="hidden"
+      animate="show"
+    >
+      {children}
+    </motion.div>
+  )
 }

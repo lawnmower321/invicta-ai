@@ -1,3 +1,6 @@
+"use client"
+
+import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { accent as accentToken } from "./tokens"
 import type { AccentColor } from "./types"
@@ -23,8 +26,6 @@ export function SectionHeader({
   divider,
   size = "md",
 }: SectionHeaderProps) {
-  // Inheritance: when accentProp is omitted, derive from var(--page-accent).
-  // When explicitly set (including "neutral"), local prop wins.
   const inherit = accentProp === undefined
   const tok = inherit ? null : accentToken(accentProp)
 
@@ -33,15 +34,17 @@ export function SectionHeader({
     ? "var(--page-accent, rgb(255 255 255 / 0.30))"
     : tok!.border
 
-  // Accent-tinted gradient divider only applies when an explicit non-neutral accent is set.
-  // Inherited accents and explicit 'neutral' fall back to the solid neutral divider.
   const useGradientDivider = !inherit && accentProp !== "neutral"
 
   const isMd = size === "md"
   const showDivider = divider ?? isMd
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-30px" }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
       className={cn(
         "flex items-end justify-between gap-3",
         showDivider && "pb-2 mb-3 border-b",
@@ -73,10 +76,7 @@ export function SectionHeader({
           </h2>
           {count !== undefined && isMd && (
             <>
-              <span
-                className="border-l border-white/[0.08] h-3 inline-block"
-                aria-hidden="true"
-              />
+              <span className="border-l border-white/[0.08] h-3 inline-block" aria-hidden="true" />
               <span
                 className="text-[10px] font-bold tabular-nums uppercase"
                 style={{ color: accentFg }}
@@ -95,6 +95,6 @@ export function SectionHeader({
           {action}
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }

@@ -1,7 +1,11 @@
+"use client"
+
+import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { SpreadBadge } from "./badges/SpreadBadge"
 import { accent as accentToken } from "./tokens"
 import { STAGE_ACCENT, PRIORITY_ACCENT } from "./presets.constants"
+import { fadeUp, cardHoverY, quickTransition, dragVariant, idleVariant } from "@/lib/animations"
 import type { AccentColor, Lead } from "./types"
 
 type LeadCardVariant = "pool" | "kanban" | "scored" | "compact"
@@ -57,14 +61,17 @@ function PoolVariant(props: LeadCardProps) {
   const accentName = resolveAccent(props)
   const tok = accentToken(accentName)
   return (
-    <div
+    <motion.div
       onClick={() => onClick?.(lead.id)}
       className={cn(
-        "relative p-3 rounded-xl border border-white/[0.08] backdrop-blur-md transition-all duration-150 ease-out cursor-pointer",
-        "hover:-translate-y-px hover:border-white/[0.16]",
-        dragging && "opacity-40 scale-[1.02]"
+        "relative p-3 rounded-xl border border-white/[0.08] backdrop-blur-md cursor-pointer",
+        "hover:border-white/[0.16]",
       )}
       style={{ borderLeft: `3px solid ${tok.solid}`, background: "var(--surface-glass)", ...selectionRing(tok, selected) }}
+      variants={fadeUp}
+      animate={dragging ? dragVariant : idleVariant}
+      whileHover={cardHoverY}
+      transition={quickTransition}
       title={lead.address}
     >
       <div className="text-sm font-bold truncate">{lead.address}</div>
@@ -75,7 +82,7 @@ function PoolVariant(props: LeadCardProps) {
         </div>
         <div className="text-xs font-mono tabular-nums shrink-0">{fmtPrice(lead.ask_price)}</div>
       </div>
-    </div>
+    </motion.div>
   )
 }
 
@@ -88,12 +95,11 @@ function KanbanVariant(props: LeadCardProps) {
       ? lead.arv * 0.7 - lead.repair_est - lead.ask_price
       : null
   return (
-    <div
+    <motion.div
       onClick={() => onClick?.(lead.id)}
       className={cn(
-        "relative group p-3 rounded-xl border border-white/[0.08] backdrop-blur-md transition-all duration-150 ease-out cursor-pointer",
-        "hover:-translate-y-px hover:border-white/[0.16]",
-        dragging && "opacity-40 scale-[1.02]"
+        "relative group p-3 rounded-xl border border-white/[0.08] backdrop-blur-md cursor-pointer",
+        "hover:border-white/[0.16]",
       )}
       style={{
         background: "var(--surface-glass)",
@@ -107,6 +113,10 @@ function KanbanVariant(props: LeadCardProps) {
             ? `0 0 24px -4px ${tok.glow}`
             : undefined,
       }}
+      variants={fadeUp}
+      animate={dragging ? dragVariant : idleVariant}
+      whileHover={cardHoverY}
+      transition={quickTransition}
       title={lead.address}
     >
       <div className="flex items-start gap-2">
@@ -140,7 +150,7 @@ function KanbanVariant(props: LeadCardProps) {
           <ActionButton label="View" hint="⌘V" onClick={() => onClick?.(lead.id)} />
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }
 
@@ -150,13 +160,16 @@ function ScoredVariant(props: LeadCardProps) {
   const accentName: AccentColor = PRIORITY_ACCENT[priority]
   const tok = accentToken(accentName)
   return (
-    <div
+    <motion.div
       onClick={() => onClick?.(lead.id)}
       className={cn(
-        "p-4 rounded-xl border backdrop-blur-md transition-all duration-150 ease-out cursor-pointer",
-        "hover:-translate-y-px hover:border-white/[0.16]"
+        "p-4 rounded-xl border backdrop-blur-md cursor-pointer",
+        "hover:border-white/[0.16]"
       )}
       style={{ borderColor: tok.border, background: "var(--surface-glass)", ...selectionRing(tok, selected) }}
+      variants={fadeUp}
+      whileHover={cardHoverY}
+      transition={quickTransition}
       title={lead.address}
     >
       <div className="flex items-start gap-3">
@@ -205,7 +218,7 @@ function ScoredVariant(props: LeadCardProps) {
           </button>
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }
 
@@ -214,19 +227,21 @@ function CompactVariant(props: LeadCardProps) {
   const accentName = resolveAccent(props)
   const tok = accentToken(accentName)
   return (
-    <div
+    <motion.div
       onClick={() => onClick?.(lead.id)}
       className={cn(
         "min-h-9 p-2 rounded-lg border border-white/[0.08] text-xs flex items-center gap-2 cursor-pointer",
         "hover:bg-white/[0.04]"
       )}
       style={selectionRing(tok, selected)}
+      whileHover={{ scale: 1.01 }}
+      transition={{ duration: 0.1 }}
       title={lead.address}
     >
       <span className="truncate font-semibold">{lead.address}</span>
       <span className="text-muted-foreground truncate">· {lead.owner_name ?? "—"}</span>
       <span className="ml-auto font-mono tabular-nums shrink-0">{fmtPrice(lead.ask_price)}</span>
-    </div>
+    </motion.div>
   )
 }
 
