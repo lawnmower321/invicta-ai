@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation"
+import { Spinner } from "@/components/invicta/Spinner"
 
 export default function DevComponentsPage() {
   if (process.env.NODE_ENV === "production") notFound()
@@ -18,7 +19,24 @@ export default function DevComponentsPage() {
 
       <main className="space-y-12">
         {/* Sections will be added progressively as components land. */}
-        <div className="text-xs text-muted-foreground">No components added yet.</div>
+        <section>
+          <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground pb-2 mb-3 border-b border-white/[0.06]">
+            Spinner
+          </h2>
+          <div className="flex items-center gap-8 flex-wrap">
+            <div className="flex items-center gap-2"><Spinner size="xs" /><span className="text-xs">xs · 12px</span></div>
+            <div className="flex items-center gap-2"><Spinner size="sm" /><span className="text-xs">sm · 16px (default)</span></div>
+            <div className="flex items-center gap-2"><Spinner size="md" /><span className="text-xs">md · 20px</span></div>
+            <div className="flex items-center gap-2"><Spinner size="lg" /><span className="text-xs">lg · 24px</span></div>
+            <div className="flex items-center gap-2"><Spinner accent="green" /><span className="text-xs">accent green</span></div>
+            <div className="flex items-center gap-2"><Spinner accent="amber" /><span className="text-xs">accent amber</span></div>
+            <div className="flex items-center gap-2"><Spinner accent="neutral" /><span className="text-xs">accent neutral</span></div>
+            <div className="flex items-center gap-2" style={{ color: "var(--invicta-red)" }}>
+              <Spinner /><span className="text-xs">currentColor (red parent)</span>
+            </div>
+            <Spinner size="md" label="Generating campaign..." />
+          </div>
+        </section>
       </main>
     </div>
   )
