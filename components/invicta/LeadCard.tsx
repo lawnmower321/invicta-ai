@@ -111,8 +111,14 @@ function KanbanVariant(props: LeadCardProps) {
       )}
       style={{
         borderLeft: `3px solid ${tok.solid}`,
-        ...selectionRing(tok, selected),
-        ...(dragging ? { boxShadow: `0 0 24px -4px ${tok.glow}` } : {}),
+        boxShadow:
+          selected && dragging
+            ? `0 0 0 1px ${tok.solid}, 0 0 24px -4px ${tok.glow}`
+            : selected
+            ? `0 0 0 1px ${tok.solid}`
+            : dragging
+            ? `0 0 24px -4px ${tok.glow}`
+            : undefined,
       }}
       title={lead.address}
     >
