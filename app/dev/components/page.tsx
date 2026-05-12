@@ -6,9 +6,13 @@ import { PriorityBadge } from "@/components/invicta/badges/PriorityBadge"
 import { SourceBadge } from "@/components/invicta/badges/SourceBadge"
 import { SpreadBadge } from "@/components/invicta/badges/SpreadBadge"
 import { ScoreBadge } from "@/components/invicta/badges/ScoreBadge"
-import { Radio, DollarSign, Users, Inbox, Target } from "lucide-react"
+import { Radio, DollarSign, Users, Inbox, Inbox as InboxIcon, Target } from "lucide-react"
 import { KpiCard, KpiGrid } from "@/components/invicta/KpiCard"
 import { SectionHeader } from "@/components/invicta/SectionHeader"
+import { EmptyState } from "@/components/invicta/EmptyState"
+import { EmptyLeads } from "@/components/invicta/empty/EmptyLeads"
+import { EmptyResults } from "@/components/invicta/empty/EmptyResults"
+import { EmptyPipeline } from "@/components/invicta/empty/EmptyPipeline"
 
 export default function DevComponentsPage() {
   if (process.env.NODE_ENV === "production") notFound()
@@ -148,6 +152,29 @@ export default function DevComponentsPage() {
               <SectionHeader title="Inherits Amber" count={7} />
             </div>
             <SectionHeader title="No Divider" count={3} divider={false} />
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground pb-2 mb-3 border-b border-white/[0.06]">
+            EmptyState — sizes
+          </h2>
+          <div className="grid grid-cols-2 gap-4">
+            <EmptyState icon={InboxIcon} title="Compact" size="compact" />
+            <EmptyState icon={InboxIcon} title="Small" size="sm" description="For empty columns and drawers." />
+            <EmptyState icon={InboxIcon} title="Medium (default)" description="Default page-level empty content." action={{ label: "+ Add", onClick: () => {} }} />
+            <EmptyState icon={InboxIcon} title="Large" size="lg" description="Whole-page empty state with a wider description." action={{ label: "Get started", onClick: () => {} }} secondaryAction={{ label: "Learn more", href: "/learn" }} />
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground pb-2 mb-3 border-b border-white/[0.06]">
+            EmptyState — presets
+          </h2>
+          <div className="grid grid-cols-3 gap-4">
+            <EmptyLeads onAdd={() => {}} />
+            <EmptyResults query="123 elm" />
+            <EmptyPipeline stage="qualified" />
           </div>
         </section>
       </main>
