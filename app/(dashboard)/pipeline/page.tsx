@@ -4,20 +4,32 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import {
-  Plus, MapPin, User, ArrowUpRight,
-  X, RotateCcw, Loader2, Inbox, ExternalLink,
+  Plus, X, Loader2, ExternalLink,
   Pencil, Check, Trash2, AlertCircle,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  LeadCard,
+  KpiCard, KpiGrid,
+  SectionHeader, EmptyLeads, EmptyPipeline,
+  StatBadge, Spinner,
+  accent as accentToken,
+  type AccentColor, type Lead as InvictaLead, type PipelineStage,
+} from "@/components/invicta";
+import { STAGE_ACCENT } from "@/components/invicta/presets.constants";
+import { fadeUp, quickTransition } from "@/lib/animations";
 
 const supabase = createClient();
 
-const STAGES = [
-  { id: "new",       label: "New Lead",         color: "var(--invicta-blue)",   bg: "var(--invicta-blue)18" },
-  { id: "contacted", label: "Contacted",         color: "var(--invicta-amber)",  bg: "var(--invicta-amber)18" },
-  { id: "qualified", label: "Qualified",         color: "var(--invicta-purple)", bg: "var(--invicta-purple)18" },
-  { id: "offer",     label: "Offer Made",        color: "var(--invicta-green)",  bg: "var(--invicta-green)18" },
-  { id: "contract",  label: "Under Contract",    color: "var(--invicta-green)",  bg: "var(--invicta-green)25" },
-  { id: "closed",    label: "Closed / Assigned", color: "var(--invicta-red)",    bg: "var(--invicta-red)18" },
+type StageDef = { id: PipelineStage; label: string };
+
+const STAGES: StageDef[] = [
+  { id: "new",       label: "New Lead" },
+  { id: "contacted", label: "Contacted" },
+  { id: "qualified", label: "Qualified" },
+  { id: "offer",     label: "Offer Made" },
+  { id: "contract",  label: "Under Contract" },
+  { id: "closed",    label: "Closed" },
 ];
 
 type Lead = {
@@ -37,8 +49,24 @@ type Lead = {
 };
 
 const EMPTY_FORM = { address: "", owner_name: "", ask_price: "", arv: "", phone: "", source: "Manual" };
+const SOURCES = ["Manual", "Cold Call", "Scraper", "Referral", "Direct Mail"];
 
 function fmt(n: number) { return "$" + n.toLocaleString(); }
+
+// LeadCard's stage is typed as PipelineStage; DB returns string. Cast at boundary.
+function toInvictaLead(l: Lead): InvictaLead {
+  return {
+    id: l.id,
+    address: l.address,
+    owner_name: l.owner_name,
+    phone: l.phone,
+    ask_price: l.ask_price,
+    arv: l.arv,
+    repair_est: l.repair_est,
+    source: l.source,
+    stage: l.stage as PipelineStage,
+  };
+}
 
 export default function PipelinePage() {
   const router = useRouter();
@@ -57,6 +85,7 @@ export default function PipelinePage() {
   const [overPool, setOverPool] = useState(false);
   const dragSource = useRef<"pool" | "kanban">("pool");
   const dragId = useRef<string | null>(null);
+  const [mobileTab, setMobileTab] = useState<string>("pool");
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
@@ -101,26 +130,18 @@ export default function PipelinePage() {
       assigned_at: new Date().toISOString(),
       stage,
     }).eq("id", leadId);
-
     await supabase.from("lead_activity").insert({
-      lead_id: leadId,
-      user_id: userId,
-      action: "claimed",
+      lead_id: leadId, user_id: userId, action: "claimed",
       details: `Claimed and moved to ${stage}`,
     });
   }
 
   async function releaseLead(leadId: string) {
     await supabase.from("leads").update({
-      assigned_to: null,
-      assigned_at: null,
-      stage: "new",
+      assigned_to: null, assigned_at: null, stage: "new",
     }).eq("id", leadId);
-
     await supabase.from("lead_activity").insert({
-      lead_id: leadId,
-      user_id: userId,
-      action: "released",
+      lead_id: leadId, user_id: userId, action: "released",
       details: "Returned to pool",
     });
   }
@@ -128,10 +149,7 @@ export default function PipelinePage() {
   async function updateStage(leadId: string, stage: string) {
     await supabase.from("leads").update({ stage }).eq("id", leadId);
     await supabase.from("lead_activity").insert({
-      lead_id: leadId,
-      user_id: userId,
-      action: "stage_changed",
-      details: stage,
+      lead_id: leadId, user_id: userId, action: "stage_changed", details: stage,
     });
   }
 
@@ -162,357 +180,122 @@ export default function PipelinePage() {
     dragSource.current = source;
     setDragging(id);
   }
-
   function onDragEnd() {
     setDragging(null);
     setOverCol(null);
     setOverPool(false);
     dragId.current = null;
   }
-
   async function onDropKanban(stageId: string) {
     if (!dragId.current) return;
-    if (dragSource.current === "pool") {
-      await claimLead(dragId.current, stageId);
-    } else {
-      await updateStage(dragId.current, stageId);
-    }
-    setDragging(null);
-    setOverCol(null);
-    dragId.current = null;
+    if (dragSource.current === "pool") await claimLead(dragId.current, stageId);
+    else await updateStage(dragId.current, stageId);
+    onDragEnd();
   }
-
   async function onDropPool() {
     if (!dragId.current || dragSource.current !== "kanban") return;
     await releaseLead(dragId.current);
-    setDragging(null);
-    setOverPool(false);
-    dragId.current = null;
+    onDragEnd();
+  }
+
+  function handleKanbanAction(action: "claim" | "release" | "delete" | "add", id: string) {
+    if (action === "release") releaseLead(id);
   }
 
   const pool = leads.filter(l => !l.assigned_to);
   const mine = leads.filter(l => l.assigned_to === userId);
   const totalValue = mine.filter(l => l.ask_price).reduce((s, l) => s + (l.ask_price ?? 0), 0);
-  const [mobileTab, setMobileTab] = useState("pool");
-
-  const MOBILE_TABS = [
-    { id: "pool", label: "Pool", count: pool.length, color: "var(--invicta-blue)" },
-    ...STAGES.map(s => ({ id: s.id, label: s.label, count: mine.filter(l => l.stage === s.id).length, color: s.color })),
-  ];
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <Loader2 size={24} className="animate-spin" style={{ color: "var(--invicta-green)" }} />
+        <Spinner />
       </div>
     );
   }
 
   return (
-    <div className="fixed top-14 md:top-0 bottom-[72px] md:bottom-0 left-0 md:left-[220px] right-0 flex flex-col overflow-hidden"
-      style={{ background: "var(--background)" }}>
-      {/* Ambient glow — green dominant (deal momentum) */}
+    <div
+      className="fixed top-14 md:top-0 bottom-[72px] md:bottom-0 left-0 md:left-[220px] right-0 flex flex-col overflow-hidden"
+      style={{
+        background: "var(--background)",
+        ["--page-accent" as string]: "var(--invicta-green)",
+      } as React.CSSProperties}
+    >
+      {/* Ambient page-accent glow */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute -top-48 -right-24 w-[500px] h-[500px] rounded-full blur-[140px]"
-          style={{ background: "var(--invicta-green)", opacity: 0.06 }} />
-        <div className="absolute -bottom-48 -left-24 w-[400px] h-[400px] rounded-full blur-[120px]"
-          style={{ background: "var(--invicta-green)", opacity: 0.04 }} />
-      </div>
-
-      {/* ── MOBILE: Tab + List ── */}
-      <div className="flex flex-col flex-1 md:hidden overflow-hidden">
-
-        {/* tab bar */}
-        <div className="flex overflow-x-auto border-b flex-shrink-0 px-2 py-2 gap-1"
-          style={{ borderColor: "var(--border)", background: "var(--surface)", scrollbarWidth: "none" }}>
-          {MOBILE_TABS.map(tab => (
-            <button key={tab.id} onClick={() => setMobileTab(tab.id)}
-              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-              style={{
-                background: mobileTab === tab.id ? `${tab.color}20` : "transparent",
-                color: mobileTab === tab.id ? tab.color : "var(--muted-foreground)",
-              }}>
-              {tab.label}
-              {tab.count > 0 && (
-                <span className="px-1.5 rounded font-bold text-xs"
-                  style={{ background: `${tab.color}25`, color: tab.color }}>
-                  {tab.count}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* pool sub-header */}
-        {mobileTab === "pool" && (
-          <div className="px-4 py-2.5 border-b flex-shrink-0 flex items-center justify-between gap-2"
-            style={{ borderColor: "var(--border)" }}>
-            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-              {poolEditMode ? "Tap trash to remove" : "Tap to claim or view"}
-            </p>
-            <div className="flex gap-2">
-              <button onClick={() => setPoolEditMode(e => !e)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold"
-                style={{
-                  background: poolEditMode ? "var(--invicta-red)20" : "var(--surface-3)",
-                  color: poolEditMode ? "var(--invicta-red)" : "var(--muted-foreground)",
-                }}>
-                {poolEditMode ? <><Check size={11} />Done</> : <><Pencil size={11} />Edit</>}
-              </button>
-              {!poolEditMode && (
-                <button onClick={() => { setSaveError(""); setShowModal(true); }}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold"
-                  style={{ background: "var(--invicta-blue)20", color: "var(--invicta-blue)" }}>
-                  <Plus size={11} /> Add
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* card list */}
-        <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
-
-          {/* pool cards */}
-          {mobileTab === "pool" && (pool.length === 0
-            ? <div className="flex flex-col items-center justify-center flex-1 gap-2 py-16" style={{ color: "var(--muted-foreground)" }}>
-                <Inbox size={28} className="opacity-30" />
-                <p className="text-xs text-center">Pool is empty — run the scraper or add leads</p>
-              </div>
-            : <>
-                {Array.from(pendingDeletes.values()).map(({ lead }) => (
-                  <div key={lead.id} className="rounded-xl border p-3 flex items-center justify-between gap-2"
-                    style={{ background: "var(--invicta-red)10", borderColor: "var(--invicta-red)40" }}>
-                    <p className="text-xs truncate flex-1" style={{ color: "var(--muted-foreground)" }}>
-                      Deleting — {lead.address.split(",")[0]}
-                    </p>
-                    <button onClick={() => undoDelete(lead.id)}
-                      className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0"
-                      style={{ background: "var(--invicta-red)20", color: "var(--invicta-red)" }}>
-                      Undo
-                    </button>
-                  </div>
-                ))}
-                {pool.filter(l => !pendingDeletes.has(l.id)).map(lead => (
-                  <div key={lead.id}
-                    onClick={() => !poolEditMode && setQuickLead(lead)}
-                    className="rounded-xl border p-4 transition-opacity"
-                    style={{
-                      background: "var(--surface)",
-                      borderColor: poolEditMode ? "var(--invicta-red)30" : "var(--border)",
-                      borderLeftWidth: 3,
-                      borderLeftColor: poolEditMode ? "var(--invicta-red)" : "var(--invicta-blue)",
-                      cursor: poolEditMode ? "default" : "pointer",
-                    }}>
-                    <div className="flex items-start gap-2 mb-2">
-                      <MapPin size={12} className="flex-shrink-0 mt-0.5"
-                        style={{ color: poolEditMode ? "var(--invicta-red)" : "var(--invicta-blue)" }} />
-                      <p className="text-sm font-bold leading-snug flex-1">{lead.address}</p>
-                      {poolEditMode && (
-                        <button onClick={() => deletePoolLead(lead)}
-                          className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center"
-                          style={{ background: "var(--invicta-red)20" }}>
-                          <Trash2 size={13} style={{ color: "var(--invicta-red)" }} />
-                        </button>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs px-2 py-0.5 rounded-full font-bold"
-                        style={{ background: "var(--surface-3)", color: "var(--muted-foreground)" }}>
-                        {lead.source}
-                      </span>
-                      {lead.ask_price && (
-                        <span className="text-sm font-bold" style={{ color: "var(--invicta-amber)" }}>
-                          {fmt(lead.ask_price)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </>
-          )}
-
-          {/* kanban stage cards */}
-          {mobileTab !== "pool" && (() => {
-            const stage = STAGES.find(s => s.id === mobileTab)!;
-            const stageLeads = mine.filter(l => l.stage === mobileTab);
-            return stageLeads.length === 0
-              ? <div className="flex flex-col items-center justify-center flex-1 gap-2 py-16" style={{ color: "var(--muted-foreground)" }}>
-                  <p className="text-sm font-bold">No leads in {stage.label}</p>
-                  <p className="text-xs">Claim from the Pool tab</p>
-                </div>
-              : stageLeads.map(lead => {
-                  const mao = lead.arv && lead.repair_est ? Math.round(lead.arv * 0.7 - lead.repair_est) : null;
-                  const spread = mao && lead.ask_price ? mao - lead.ask_price : null;
-                  return (
-                    <div key={lead.id} onClick={() => router.push(`/leads/${lead.id}`)}
-                      className="rounded-xl border p-4 cursor-pointer active:opacity-60 transition-opacity"
-                      style={{ background: "var(--surface)", borderColor: "var(--border)", borderLeftWidth: 3, borderLeftColor: stage.color }}>
-                      <div className="flex items-start gap-2 mb-2">
-                        <MapPin size={12} className="flex-shrink-0 mt-0.5" style={{ color: stage.color }} />
-                        <p className="text-sm font-bold leading-snug flex-1">{lead.address}</p>
-                        {spread !== null && (
-                          <span className="text-xs font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
-                            style={{ background: spread > 0 ? "var(--invicta-green)20" : "var(--invicta-red)20", color: spread > 0 ? "var(--invicta-green)" : "var(--invicta-red)" }}>
-                            {spread > 0 ? "+" : ""}{fmt(spread)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        {lead.ask_price
-                          ? <span className="text-sm font-bold">{fmt(lead.ask_price)}</span>
-                          : <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>No price</span>}
-                        <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                          {lead.owner_name ?? "Tap for detail →"}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                });
-          })()}
-        </div>
-      </div>
-
-      {/* ── DESKTOP: Pool + Kanban ── */}
-      <div className="hidden md:flex flex-1 overflow-hidden">
-
-        {/* Pool Panel */}
         <div
-          className="flex flex-col border-r flex-shrink-0 transition-all"
-          style={{
-            width: 280,
-            background: overPool ? "var(--invicta-blue)08" : "var(--surface)",
-            borderColor: overPool ? "var(--invicta-blue)" : "var(--border)",
-          }}
-          onDragOver={e => { e.preventDefault(); setOverPool(true); }}
-          onDragLeave={() => setOverPool(false)}
-          onDrop={onDropPool}
-        >
-          <div className="px-4 pt-6 pb-4 border-b flex-shrink-0" style={{ borderColor: "var(--border)" }}>
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2">
-                <Inbox size={15} style={{ color: "var(--invicta-blue)" }} />
-                <span className="font-bold text-sm tracking-wide">Lead Pool</span>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full"
-                  style={{ background: "var(--invicta-blue)20", color: "var(--invicta-blue)" }}>
-                  {pool.length}
-                </span>
-              </div>
-              <button onClick={() => setPoolEditMode(e => !e)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all"
-                style={{
-                  background: poolEditMode ? "var(--invicta-red)20" : "var(--surface-3)",
-                  color: poolEditMode ? "var(--invicta-red)" : "var(--muted-foreground)",
-                }}>
-                {poolEditMode ? <><Check size={11} />Done</> : <><Pencil size={11} />Edit</>}
-              </button>
-            </div>
-            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-              {poolEditMode ? "Tap the trash icon to remove a lead" : "Drag into pipeline to claim · click to preview"}
-            </p>
-            {!poolEditMode && (
-              <button onClick={() => { setSaveError(""); setShowModal(true); }}
-                className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-xl font-bold text-xs transition-all hover:opacity-90"
-                style={{ background: "var(--invicta-blue)20", color: "var(--invicta-blue)", border: "1px dashed var(--invicta-blue)50" }}>
-                <Plus size={13} /> Add to Pool
-              </button>
-            )}
-          </div>
+          className="absolute -top-48 -right-24 w-[500px] h-[500px] rounded-full blur-[140px]"
+          style={{ background: "var(--page-accent)", opacity: 0.06 }}
+        />
+        <div
+          className="absolute -bottom-48 -left-24 w-[400px] h-[400px] rounded-full blur-[120px]"
+          style={{ background: "var(--page-accent)", opacity: 0.04 }}
+        />
+      </div>
 
-          <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
-            {pool.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full gap-2" style={{ color: "var(--muted-foreground)" }}>
-                <Inbox size={24} className="opacity-30" />
-                <p className="text-xs text-center">Pool is empty — add leads or run the scraper</p>
-              </div>
-            )}
-            {/* undo toasts */}
-            {Array.from(pendingDeletes.values()).map(({ lead }) => (
-              <div key={lead.id} className="rounded-xl border p-3 flex items-center justify-between gap-2"
-                style={{ background: "var(--invicta-red)10", borderColor: "var(--invicta-red)40" }}>
-                <p className="text-xs truncate flex-1" style={{ color: "var(--muted-foreground)" }}>
-                  Deleting — {lead.address.split(",")[0]}
-                </p>
-                <button onClick={() => undoDelete(lead.id)}
-                  className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0"
-                  style={{ background: "var(--invicta-red)20", color: "var(--invicta-red)" }}>
-                  Undo
-                </button>
-              </div>
-            ))}
+      {/* ── MOBILE ─────────────────────────────────────────── */}
+      <MobileView
+        mobileTab={mobileTab}
+        setMobileTab={setMobileTab}
+        pool={pool}
+        mine={mine}
+        pendingDeletes={pendingDeletes}
+        poolEditMode={poolEditMode}
+        setPoolEditMode={setPoolEditMode}
+        deletePoolLead={deletePoolLead}
+        undoDelete={undoDelete}
+        openAdd={() => { setSaveError(""); setShowModal(true); }}
+        openQuick={setQuickLead}
+        onCardClick={(id) => router.push(`/leads/${id}`)}
+      />
 
-            {pool.filter(l => !pendingDeletes.has(l.id)).map(lead => (
-              <div key={lead.id} draggable={!poolEditMode}
-                onDragStart={() => !poolEditMode && onDragStart(lead.id, "pool")}
-                onDragEnd={onDragEnd}
-                onClick={() => !poolEditMode && setQuickLead(lead)}
-                className="rounded-xl border p-3 transition-all"
-                style={{
-                  background: "var(--surface-2)",
-                  borderColor: dragging === lead.id ? "var(--invicta-blue)" : poolEditMode ? "var(--invicta-red)30" : "var(--border)",
-                  opacity: dragging === lead.id ? 0.4 : 1,
-                  borderLeftWidth: 3, borderLeftColor: poolEditMode ? "var(--invicta-red)" : "var(--invicta-blue)",
-                  cursor: poolEditMode ? "default" : "pointer",
-                }}>
-                <div className="flex items-start gap-1.5 mb-1.5">
-                  <MapPin size={11} className="flex-shrink-0 mt-0.5"
-                    style={{ color: poolEditMode ? "var(--invicta-red)" : "var(--invicta-blue)" }} />
-                  <p className="text-xs font-bold leading-snug flex-1">{lead.address}</p>
-                  {poolEditMode && (
-                    <button onClick={() => deletePoolLead(lead)}
-                      className="flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center hover:opacity-70"
-                      style={{ background: "var(--invicta-red)20" }}>
-                      <Trash2 size={11} style={{ color: "var(--invicta-red)" }} />
-                    </button>
-                  )}
-                </div>
-                {lead.owner_name && (
-                  <div className="flex items-center gap-1 mb-1.5">
-                    <User size={9} style={{ color: "var(--muted-foreground)" }} />
-                    <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{lead.owner_name}</p>
-                  </div>
-                )}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs px-1.5 py-0.5 rounded font-bold"
-                    style={{ background: "var(--surface-3)", color: "var(--muted-foreground)" }}>
-                    {lead.source}
-                  </span>
-                  {lead.ask_price && (
-                    <span className="text-xs font-bold" style={{ color: "var(--invicta-amber)" }}>
-                      {fmt(lead.ask_price)}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* ── DESKTOP ────────────────────────────────────────── */}
+      <div className="hidden md:flex flex-1 relative z-10 overflow-hidden">
+        <PoolPanel
+          pool={pool}
+          pendingDeletes={pendingDeletes}
+          poolEditMode={poolEditMode}
+          setPoolEditMode={setPoolEditMode}
+          openAdd={() => { setSaveError(""); setShowModal(true); }}
+          openQuick={setQuickLead}
+          deletePoolLead={deletePoolLead}
+          undoDelete={undoDelete}
+          dragging={dragging}
+          dragSourceIsKanban={dragSource.current === "kanban"}
+          overPool={overPool}
+          onDragOverPool={(over) => setOverPool(over)}
+          onDropPool={onDropPool}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+        />
 
-          {overPool && dragSource.current === "kanban" && (
-            <div className="px-3 py-2 text-xs font-bold text-center border-t flex-shrink-0"
-              style={{ color: "var(--invicta-blue)", borderColor: "var(--invicta-blue)" }}>
-              Drop to release back to pool
-            </div>
-          )}
-        </div>
-
-        {/* Kanban */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-6 pt-6 pb-4 flex items-center justify-between flex-shrink-0 border-b"
-            style={{ borderColor: "var(--border)" }}>
+          <div
+            className="px-6 pt-5 pb-4 flex items-center justify-between flex-shrink-0 border-b"
+            style={{ borderColor: "rgb(255 255 255 / 0.06)" }}
+          >
             <div>
-              <h1 className="text-xl font-bold">My Pipeline</h1>
-              <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
-                {mine.length} leads · {totalValue > 0 ? fmt(totalValue) + " ask value" : "no value yet"}
+              <div className="text-[10px] tracking-[0.18em] opacity-60 uppercase font-bold mb-0.5">
+                Pipeline
+              </div>
+              <h1 className="font-bold text-xl md:text-2xl">My Deals</h1>
+              <p className="text-xs mt-0.5 text-muted-foreground">
+                {mine.length} leads
+                {totalValue > 0 && <> · {fmt(totalValue)} ask value</>}
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 flex-wrap">
               {STAGES.map(s => {
                 const count = mine.filter(l => l.stage === s.id).length;
                 return (
-                  <div key={s.id} className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: s.color }} />
-                    <span className="text-xs font-bold" style={{ color: count > 0 ? s.color : "var(--muted-foreground)" }}>{count}</span>
-                  </div>
+                  <StatBadge
+                    key={s.id}
+                    label={`${count}`}
+                    accent={count > 0 ? STAGE_ACCENT[s.id] : "neutral"}
+                    size="xs"
+                    variant={count > 0 ? "soft" : "outline"}
+                  />
                 );
               })}
             </div>
@@ -523,75 +306,55 @@ export default function PipelinePage() {
               {STAGES.map(stage => {
                 const stageLeads = mine.filter(l => l.stage === stage.id);
                 const isOver = overCol === stage.id;
+                const tok = accentToken(STAGE_ACCENT[stage.id]);
                 return (
-                  <div key={stage.id}
-                    className="flex flex-col flex-shrink-0 rounded-2xl border transition-all"
-                    style={{ width: 248, background: isOver ? stage.bg : "var(--surface)", borderColor: isOver ? stage.color : "var(--border)" }}
+                  <div
+                    key={stage.id}
+                    data-glass
+                    className="flex flex-col flex-shrink-0 rounded-2xl border border-white/[0.08] transition-colors"
+                    style={{
+                      width: 248,
+                      background: isOver ? tok.soft : "var(--surface-glass)",
+                      borderColor: isOver ? tok.border : undefined,
+                    }}
                     onDragOver={e => { e.preventDefault(); setOverCol(stage.id); }}
                     onDragLeave={() => setOverCol(null)}
                     onDrop={() => onDropKanban(stage.id)}
                   >
-                    <div className="px-3 pt-3 pb-2.5 flex items-center justify-between flex-shrink-0 border-b"
-                      style={{ borderColor: "var(--border)" }}>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full" style={{ background: stage.color }} />
-                        <span className="text-xs font-bold tracking-wide">{stage.label}</span>
-                      </div>
-                      <span className="text-xs font-bold px-1.5 py-0.5 rounded-full"
-                        style={{ background: stage.bg, color: stage.color }}>
-                        {stageLeads.length}
-                      </span>
+                    <div className="px-3 pt-3 pb-2.5 flex-shrink-0">
+                      <SectionHeader
+                        title={stage.label}
+                        accent={STAGE_ACCENT[stage.id]}
+                        count={stageLeads.length}
+                        size="sm"
+                      />
                     </div>
                     <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
-                      {stageLeads.length === 0 && (
-                        <div className="flex-1 flex items-center justify-center rounded-xl border border-dashed"
-                          style={{ borderColor: "var(--border)", minHeight: 60 }}>
-                          <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                            {isOver ? "Drop here" : "Empty"}
-                          </p>
+                      {stageLeads.length === 0 ? (
+                        <div className="flex-1 min-h-[80px] flex items-stretch">
+                          <div className="flex-1">
+                            <EmptyPipeline stage={stage.id} />
+                          </div>
                         </div>
-                      )}
-                      {stageLeads.map(lead => {
-                        const mao = lead.arv && lead.repair_est ? Math.round(lead.arv * 0.7 - lead.repair_est) : null;
-                        const spread = mao && lead.ask_price ? mao - lead.ask_price : null;
-                        return (
-                          <div key={lead.id} draggable
+                      ) : (
+                        stageLeads.map(lead => (
+                          <div
+                            key={lead.id}
+                            draggable
                             onDragStart={() => onDragStart(lead.id, "kanban")}
                             onDragEnd={onDragEnd}
-                            onClick={() => router.push(`/leads/${lead.id}`)}
-                            className="rounded-xl border p-3 cursor-pointer transition-all group"
-                            style={{
-                              background: "var(--surface-2)",
-                              borderColor: dragging === lead.id ? stage.color : "var(--border)",
-                              opacity: dragging === lead.id ? 0.4 : 1,
-                              borderLeftWidth: 3, borderLeftColor: stage.color,
-                            }}>
-                            <div className="flex items-start gap-1.5 mb-1.5">
-                              <MapPin size={11} className="flex-shrink-0 mt-0.5" style={{ color: stage.color }} />
-                              <p className="text-xs font-bold leading-snug">{lead.address}</p>
-                            </div>
-                            {lead.owner_name && (
-                              <p className="text-xs mb-1.5 pl-4" style={{ color: "var(--muted-foreground)" }}>{lead.owner_name}</p>
-                            )}
-                            <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: "var(--border)" }}>
-                              {lead.ask_price
-                                ? <span className="text-xs font-bold">{fmt(lead.ask_price)}</span>
-                                : <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>No price</span>}
-                              {spread !== null && (
-                                <span className="text-xs font-bold px-1.5 py-0.5 rounded-full"
-                                  style={{ background: spread > 0 ? "var(--invicta-green)20" : "var(--invicta-red)20", color: spread > 0 ? "var(--invicta-green)" : "var(--invicta-red)" }}>
-                                  {spread > 0 ? "+" : ""}{fmt(spread)}
-                                </span>
-                              )}
-                            </div>
-                            <button onClick={e => { e.stopPropagation(); releaseLead(lead.id); }}
-                              className="mt-2 w-full flex items-center justify-center gap-1 py-1 rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                              style={{ background: "var(--surface-3)", color: "var(--muted-foreground)" }}>
-                              <RotateCcw size={10} /> Release
-                            </button>
+                          >
+                            <LeadCard
+                              variant="kanban"
+                              lead={toInvictaLead(lead)}
+                              dragging={dragging === lead.id}
+                              onClick={(id) => router.push(`/leads/${id}`)}
+                              onAction={handleKanbanAction}
+                              showActions
+                            />
                           </div>
-                        );
-                      })}
+                        ))
+                      )}
                     </div>
                   </div>
                 );
@@ -601,143 +364,582 @@ export default function PipelinePage() {
         </div>
       </div>
 
-      {/* Quick Lead Sheet */}
-      {quickLead && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center"
-          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
-          onClick={e => e.target === e.currentTarget && setQuickLead(null)}>
-          <div className="w-full md:max-w-sm rounded-t-2xl md:rounded-2xl border p-5 flex flex-col gap-4"
-            style={{ background: "var(--card)", borderColor: "var(--border)" }}>
-            <div className="flex items-start justify-between">
-              <div className="flex-1 pr-3">
-                <p className="font-bold leading-snug">{quickLead.address}</p>
-                <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>{quickLead.source}</p>
-              </div>
-              <button onClick={() => setQuickLead(null)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: "var(--surface-3)" }}>
-                <X size={14} />
-              </button>
-            </div>
+      <AnimatePresence>
+        {quickLead && (
+          <QuickLeadSheet
+            lead={quickLead}
+            onClose={() => setQuickLead(null)}
+            onClaim={async () => { await claimLead(quickLead.id, "new"); setQuickLead(null); }}
+            onView={() => { router.push(`/leads/${quickLead.id}`); setQuickLead(null); }}
+          />
+        )}
+      </AnimatePresence>
 
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { label: "Ask Price", value: quickLead.ask_price ? fmt(quickLead.ask_price) : "—", color: "var(--invicta-amber)" },
-                { label: "Est. ARV",  value: quickLead.arv ? fmt(quickLead.arv) : "—",             color: "var(--invicta-blue)" },
-                { label: "Repair",    value: quickLead.repair_est ? fmt(quickLead.repair_est) : "—", color: "var(--invicta-red)" },
-                { label: "MAO (70%)", value: quickLead.arv && quickLead.repair_est ? fmt(Math.round(quickLead.arv * 0.7 - quickLead.repair_est)) : "—", color: "var(--invicta-green)" },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="rounded-xl p-3" style={{ background: "var(--surface-2)" }}>
-                  <p className="text-xs mb-0.5" style={{ color: "var(--muted-foreground)" }}>{label}</p>
-                  <p className="text-base font-bold" style={{ color }}>{value}</p>
-                </div>
-              ))}
-            </div>
+      <AnimatePresence>
+        {showModal && (
+          <AddLeadModal
+            form={form}
+            setForm={setForm}
+            saving={saving}
+            saveError={saveError}
+            onClose={() => setShowModal(false)}
+            onSubmit={addLead}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
-            {quickLead.notes && (
-              <p className="text-xs leading-relaxed px-1" style={{ color: "var(--muted-foreground)" }}>
-                {quickLead.notes}
-              </p>
-            )}
+// ────────────────────────────────────────────────────────────
+// Mobile
+// ────────────────────────────────────────────────────────────
 
-            <div className="flex gap-2">
-              <button
-                onClick={async () => { await claimLead(quickLead.id, "new"); setQuickLead(null); }}
-                className="flex-1 py-2.5 rounded-xl font-bold text-sm"
-                style={{ background: "var(--invicta-green)", color: "#000" }}>
-                Claim Lead
-              </button>
-              <button
-                onClick={() => { router.push(`/leads/${quickLead.id}`); setQuickLead(null); }}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-sm"
-                style={{ background: "var(--surface-3)", color: "var(--muted-foreground)" }}>
-                <ExternalLink size={13} />
-                Full Detail
-              </button>
-            </div>
-          </div>
+type MobileViewProps = {
+  mobileTab: string;
+  setMobileTab: (id: string) => void;
+  pool: Lead[];
+  mine: Lead[];
+  pendingDeletes: Map<string, { lead: Lead }>;
+  poolEditMode: boolean;
+  setPoolEditMode: (v: boolean | ((prev: boolean) => boolean)) => void;
+  deletePoolLead: (l: Lead) => void;
+  undoDelete: (id: string) => void;
+  openAdd: () => void;
+  openQuick: (l: Lead) => void;
+  onCardClick: (id: string) => void;
+};
+
+function MobileView(props: MobileViewProps) {
+  const {
+    mobileTab, setMobileTab, pool, mine, pendingDeletes,
+    poolEditMode, setPoolEditMode, deletePoolLead, undoDelete,
+    openAdd, openQuick, onCardClick,
+  } = props;
+
+  const TABS = [
+    { id: "pool", label: "Pool", count: pool.length, accent: "blue" as AccentColor },
+    ...STAGES.map(s => ({
+      id: s.id, label: s.label,
+      count: mine.filter(l => l.stage === s.id).length,
+      accent: STAGE_ACCENT[s.id],
+    })),
+  ];
+
+  return (
+    <div className="flex flex-col flex-1 md:hidden relative z-10 overflow-hidden">
+      <div
+        className="flex overflow-x-auto border-b flex-shrink-0 px-2 py-2 gap-1"
+        style={{ borderColor: "rgb(255 255 255 / 0.06)", scrollbarWidth: "none" }}
+      >
+        {TABS.map(tab => {
+          const active = mobileTab === tab.id;
+          const tok = accentToken(tab.accent);
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setMobileTab(tab.id)}
+              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold"
+              style={{
+                background: active ? tok.soft : "transparent",
+                color: active ? tok.fg : "var(--muted-foreground)",
+              }}
+            >
+              {tab.label}
+              {tab.count > 0 && (
+                <StatBadge label={`${tab.count}`} accent={tab.accent} size="xs" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {mobileTab === "pool" && (
+        <div className="px-4 py-2.5 flex-shrink-0">
+          <SectionHeader
+            title="Lead Pool"
+            count={pool.length}
+            accent="blue"
+            hint={poolEditMode ? "Tap trash to remove" : "Tap to claim or view"}
+            action={
+              <>
+                <button
+                  onClick={() => setPoolEditMode(e => !e)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold"
+                  style={{
+                    background: poolEditMode ? accentToken("red").soft : "var(--surface-3)",
+                    color: poolEditMode ? accentToken("red").fg : "var(--muted-foreground)",
+                  }}
+                >
+                  {poolEditMode ? <><Check size={11} />Done</> : <><Pencil size={11} />Edit</>}
+                </button>
+                {!poolEditMode && (
+                  <button
+                    onClick={openAdd}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold"
+                    style={{ background: accentToken("blue").soft, color: accentToken("blue").fg }}
+                  >
+                    <Plus size={11} /> Add
+                  </button>
+                )}
+              </>
+            }
+          />
         </div>
       )}
 
-      {/* Add Lead Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
-          onClick={e => e.target === e.currentTarget && setShowModal(false)}>
-          <div className="w-full max-w-md rounded-2xl border p-6"
-            style={{ background: "var(--card)", borderColor: "var(--border)" }}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold">Add Lead to Pool</h2>
-              <button onClick={() => setShowModal(false)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center hover:opacity-60"
-                style={{ background: "var(--surface-3)" }}>
-                <X size={14} />
-              </button>
-            </div>
-            <div className="flex flex-col gap-4">
-              {[
-                { key: "address",    label: "Property Address *", placeholder: "123 Main St, White Plains NY" },
-                { key: "owner_name", label: "Owner Name",         placeholder: "John Smith" },
-                { key: "phone",      label: "Phone",              placeholder: "(914) 555-0000" },
-                { key: "ask_price",  label: "Ask Price",          placeholder: "$175,000" },
-                { key: "arv",        label: "Est. ARV",           placeholder: "$290,000" },
-              ].map(({ key, label, placeholder }) => (
-                <div key={key} className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold tracking-wider uppercase"
-                    style={{ color: "var(--muted-foreground)" }}>{label}</label>
-                  <input
-                    type="text"
-                    value={(form as any)[key]}
-                    onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
-                    placeholder={placeholder}
-                    autoFocus={key === "address"}
-                    className="w-full px-4 py-2.5 rounded-xl border text-sm outline-none transition-all"
-                    style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--foreground)", fontFamily: "inherit" }}
-                    onFocus={e => (e.target.style.borderColor = "var(--invicta-blue)")}
-                    onBlur={e => (e.target.style.borderColor = "var(--border)")}
-                  />
-                </div>
+      <div className="flex-1 overflow-y-auto px-3 pb-3 flex flex-col gap-2">
+        {mobileTab === "pool" ? (
+          pool.length === 0 && pendingDeletes.size === 0 ? (
+            <EmptyLeads onAdd={openAdd} />
+          ) : (
+            <>
+              {Array.from(pendingDeletes.values()).map(({ lead }) => (
+                <UndoRow key={lead.id} lead={lead} onUndo={() => undoDelete(lead.id)} />
               ))}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold tracking-wider uppercase"
-                  style={{ color: "var(--muted-foreground)" }}>Source</label>
-                <div className="flex gap-2 flex-wrap">
-                  {["Manual", "Cold Call", "Scraper", "Referral", "Direct Mail"].map(s => (
-                    <button key={s} onClick={() => setForm(f => ({ ...f, source: s }))}
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-                      style={{
-                        background: form.source === s ? "var(--invicta-blue)20" : "var(--surface-3)",
-                        color: form.source === s ? "var(--invicta-blue)" : "var(--muted-foreground)",
-                        border: form.source === s ? "1px solid var(--invicta-blue)" : "1px solid var(--border)",
-                      }}>
-                      {s}
-                    </button>
-                  ))}
-                </div>
+              {pool.filter(l => !pendingDeletes.has(l.id)).map(lead => (
+                <PoolCardWithEdit
+                  key={lead.id}
+                  lead={lead}
+                  editMode={poolEditMode}
+                  onDelete={() => deletePoolLead(lead)}
+                  onClick={() => !poolEditMode && openQuick(lead)}
+                />
+              ))}
+            </>
+          )
+        ) : (() => {
+          const stage = STAGES.find(s => s.id === mobileTab);
+          if (!stage) return null;
+          const stageLeads = mine.filter(l => l.stage === mobileTab);
+          if (stageLeads.length === 0) {
+            return (
+              <div className="pt-8">
+                <EmptyPipeline stage={stage.id} />
               </div>
-            </div>
-            {saveError && (
-              <div className="flex items-center gap-2 text-xs mt-4 p-3 rounded-xl"
-                style={{ background: "var(--invicta-red)10", color: "var(--invicta-red)" }}>
-                <AlertCircle size={13} />{saveError}
+            );
+          }
+          return stageLeads.map(lead => (
+            <LeadCard
+              key={lead.id}
+              variant="kanban"
+              lead={toInvictaLead(lead)}
+              onClick={onCardClick}
+            />
+          ));
+        })()}
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────
+// Pool panel (desktop)
+// ────────────────────────────────────────────────────────────
+
+type PoolPanelProps = {
+  pool: Lead[];
+  pendingDeletes: Map<string, { lead: Lead }>;
+  poolEditMode: boolean;
+  setPoolEditMode: (v: boolean | ((prev: boolean) => boolean)) => void;
+  openAdd: () => void;
+  openQuick: (l: Lead) => void;
+  deletePoolLead: (l: Lead) => void;
+  undoDelete: (id: string) => void;
+  dragging: string | null;
+  dragSourceIsKanban: boolean;
+  overPool: boolean;
+  onDragOverPool: (over: boolean) => void;
+  onDropPool: () => void;
+  onDragStart: (id: string, source: "pool" | "kanban") => void;
+  onDragEnd: () => void;
+};
+
+function PoolPanel(props: PoolPanelProps) {
+  const blue = accentToken("blue");
+  const red = accentToken("red");
+  return (
+    <div
+      className="flex flex-col border-r flex-shrink-0 transition-colors"
+      style={{
+        width: 280,
+        background: props.overPool ? blue.soft : "var(--surface)",
+        borderColor: props.overPool ? blue.border : "rgb(255 255 255 / 0.06)",
+      }}
+      onDragOver={e => { e.preventDefault(); props.onDragOverPool(true); }}
+      onDragLeave={() => props.onDragOverPool(false)}
+      onDrop={props.onDropPool}
+    >
+      <div className="px-4 pt-5 pb-4 flex-shrink-0 border-b" style={{ borderColor: "rgb(255 255 255 / 0.06)" }}>
+        <SectionHeader
+          title="Lead Pool"
+          count={props.pool.length}
+          accent="blue"
+          hint={props.poolEditMode ? "Tap trash to remove" : "Drag to claim · click to preview"}
+          divider={false}
+          action={
+            <button
+              onClick={() => props.setPoolEditMode(e => !e)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold"
+              style={{
+                background: props.poolEditMode ? red.soft : "var(--surface-3)",
+                color: props.poolEditMode ? red.fg : "var(--muted-foreground)",
+              }}
+            >
+              {props.poolEditMode ? <><Check size={11} />Done</> : <><Pencil size={11} />Edit</>}
+            </button>
+          }
+        />
+        {!props.poolEditMode && (
+          <button
+            onClick={props.openAdd}
+            className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-xl font-bold text-xs hover:opacity-90"
+            style={{ background: blue.soft, color: blue.fg, border: `1px dashed ${blue.border}` }}
+          >
+            <Plus size={13} /> Add to Pool
+          </button>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
+        {props.pool.length === 0 && props.pendingDeletes.size === 0 ? (
+          <EmptyLeads onAdd={props.openAdd} />
+        ) : (
+          <>
+            {Array.from(props.pendingDeletes.values()).map(({ lead }) => (
+              <UndoRow key={lead.id} lead={lead} onUndo={() => props.undoDelete(lead.id)} />
+            ))}
+            {props.pool.filter(l => !props.pendingDeletes.has(l.id)).map(lead => (
+              <div
+                key={lead.id}
+                draggable={!props.poolEditMode}
+                onDragStart={() => !props.poolEditMode && props.onDragStart(lead.id, "pool")}
+                onDragEnd={props.onDragEnd}
+                className="relative"
+              >
+                <LeadCard
+                  variant="pool"
+                  lead={toInvictaLead(lead)}
+                  dragging={props.dragging === lead.id}
+                  onClick={() => !props.poolEditMode && props.openQuick(lead)}
+                  stageColor={props.poolEditMode ? "red" : "blue"}
+                />
+                {props.poolEditMode && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); props.deletePoolLead(lead); }}
+                    className="absolute top-2 right-2 w-6 h-6 rounded-lg flex items-center justify-center hover:opacity-70"
+                    style={{ background: red.soft }}
+                    aria-label="Delete lead"
+                  >
+                    <Trash2 size={11} style={{ color: red.fg }} />
+                  </button>
+                )}
               </div>
-            )}
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => setShowModal(false)}
-                className="flex-1 py-2.5 rounded-xl font-bold text-sm"
-                style={{ background: "var(--surface-3)", color: "var(--muted-foreground)" }}>
-                Cancel
-              </button>
-              <button onClick={addLead} disabled={saving}
-                className="flex-1 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2"
-                style={{ background: "var(--invicta-blue)", color: "#fff" }}>
-                {saving && <Loader2 size={14} className="animate-spin" />}
-                Add to Pool
-              </button>
-            </div>
-          </div>
+            ))}
+          </>
+        )}
+      </div>
+
+      {props.overPool && props.dragSourceIsKanban && (
+        <div
+          className="px-3 py-2 text-xs font-bold text-center border-t flex-shrink-0"
+          style={{ color: blue.fg, borderColor: blue.border }}
+        >
+          Drop to release to pool
         </div>
       )}
     </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────
+// Mobile pool card with absolute edit-mode delete affordance
+// ────────────────────────────────────────────────────────────
+
+function PoolCardWithEdit({
+  lead, editMode, onDelete, onClick,
+}: {
+  lead: Lead;
+  editMode: boolean;
+  onDelete: () => void;
+  onClick: () => void;
+}) {
+  const red = accentToken("red");
+  return (
+    <div className="relative">
+      <LeadCard
+        variant="pool"
+        lead={toInvictaLead(lead)}
+        onClick={onClick}
+        stageColor={editMode ? "red" : "blue"}
+      />
+      {editMode && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className="absolute top-2 right-2 w-7 h-7 rounded-lg flex items-center justify-center hover:opacity-70"
+          style={{ background: red.soft }}
+          aria-label="Delete lead"
+        >
+          <Trash2 size={13} style={{ color: red.fg }} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────
+// Pending-delete undo row
+// ────────────────────────────────────────────────────────────
+
+function UndoRow({ lead, onUndo }: { lead: Lead; onUndo: () => void }) {
+  const red = accentToken("red");
+  return (
+    <motion.div
+      variants={fadeUp}
+      initial="hidden"
+      animate="show"
+      className="rounded-xl border p-3 flex items-center justify-between gap-2"
+      style={{ background: red.soft, borderColor: red.border }}
+    >
+      <p className="text-xs truncate flex-1 text-muted-foreground">
+        Deleting — {lead.address.split(",")[0]}
+      </p>
+      <button
+        onClick={onUndo}
+        className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0"
+        style={{ background: red.soft, color: red.fg }}
+      >
+        Undo
+      </button>
+    </motion.div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────
+// Quick Lead Sheet
+// ────────────────────────────────────────────────────────────
+
+function QuickLeadSheet({
+  lead, onClose, onClaim, onView,
+}: {
+  lead: Lead;
+  onClose: () => void;
+  onClaim: () => void;
+  onView: () => void;
+}) {
+  const green = accentToken("green");
+  const mao = lead.arv && lead.repair_est
+    ? Math.round(lead.arv * 0.7 - lead.repair_est)
+    : null;
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={quickTransition}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <motion.div
+        data-glass
+        className="w-full md:max-w-md rounded-t-2xl md:rounded-2xl border border-white/[0.08] p-5 flex flex-col gap-4"
+        style={{ background: "var(--surface-glass)" }}
+        initial={{ y: 24, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 24, opacity: 0 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+      >
+        <SectionHeader
+          title={lead.address}
+          eyebrow={lead.source}
+          divider={false}
+          action={
+            <button
+              onClick={onClose}
+              className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: "var(--surface-3)" }}
+              aria-label="Close"
+            >
+              <X size={14} />
+            </button>
+          }
+        />
+
+        <KpiGrid cols={2}>
+          <KpiCard label="Ask"   value={lead.ask_price ?? 0}            format={lead.ask_price ? "currency" : "raw"} accent="amber"  />
+          <KpiCard label="ARV"   value={lead.arv ?? 0}                  format={lead.arv ? "currency" : "raw"}        accent="blue"   />
+          <KpiCard label="Repair" value={lead.repair_est ?? 0}          format={lead.repair_est ? "currency" : "raw"} accent="red"    />
+          <KpiCard label="MAO 70%" value={mao ?? 0}                     format={mao ? "currency" : "raw"}             accent="green"  />
+        </KpiGrid>
+
+        {lead.notes && (
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {lead.notes}
+          </p>
+        )}
+
+        <div className="flex gap-2">
+          <button
+            onClick={onClaim}
+            className="flex-1 py-2.5 rounded-xl font-bold text-sm"
+            style={{ background: green.solid, color: "#000" }}
+          >
+            Claim Lead
+          </button>
+          <button
+            onClick={onView}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-sm text-muted-foreground"
+            style={{ background: "var(--surface-3)" }}
+          >
+            <ExternalLink size={13} />
+            Full Detail
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────
+// Add Lead Modal
+// ────────────────────────────────────────────────────────────
+
+type AddLeadModalProps = {
+  form: typeof EMPTY_FORM;
+  setForm: (fn: (f: typeof EMPTY_FORM) => typeof EMPTY_FORM) => void;
+  saving: boolean;
+  saveError: string;
+  onClose: () => void;
+  onSubmit: () => void;
+};
+
+function AddLeadModal({ form, setForm, saving, saveError, onClose, onSubmit }: AddLeadModalProps) {
+  const blue = accentToken("blue");
+  const red = accentToken("red");
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={quickTransition}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <motion.div
+        data-glass
+        className="w-full max-w-md rounded-2xl border border-white/[0.08] p-6"
+        style={{ background: "var(--surface-glass)" }}
+        initial={{ y: 16, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 16, opacity: 0 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+      >
+        <div className="mb-5">
+          <SectionHeader
+            title="Add Lead to Pool"
+            accent="blue"
+            divider={false}
+            action={
+              <button
+                onClick={onClose}
+                className="w-7 h-7 rounded-lg flex items-center justify-center hover:opacity-60"
+                style={{ background: "var(--surface-3)" }}
+                aria-label="Close"
+              >
+                <X size={14} />
+              </button>
+            }
+          />
+        </div>
+
+        <div className="flex flex-col gap-4">
+          {[
+            { key: "address",    label: "Property Address *", placeholder: "123 Main St, White Plains NY" },
+            { key: "owner_name", label: "Owner Name",         placeholder: "John Smith" },
+            { key: "phone",      label: "Phone",              placeholder: "(914) 555-0000" },
+            { key: "ask_price",  label: "Ask Price",          placeholder: "$175,000" },
+            { key: "arv",        label: "Est. ARV",           placeholder: "$290,000" },
+          ].map(({ key, label, placeholder }) => (
+            <div key={key} className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold tracking-[0.14em] uppercase text-muted-foreground">
+                {label}
+              </label>
+              <input
+                type="text"
+                value={(form as Record<string, string>)[key]}
+                onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+                placeholder={placeholder}
+                autoFocus={key === "address"}
+                className="w-full px-4 py-2.5 rounded-xl border text-sm outline-none"
+                style={{
+                  background: "var(--surface-2)",
+                  borderColor: "rgb(255 255 255 / 0.08)",
+                  color: "var(--foreground)",
+                  fontFamily: "inherit",
+                }}
+                onFocus={e => (e.target.style.borderColor = blue.fg)}
+                onBlur={e => (e.target.style.borderColor = "rgb(255 255 255 / 0.08)")}
+              />
+            </div>
+          ))}
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold tracking-[0.14em] uppercase text-muted-foreground">
+              Source
+            </label>
+            <div className="flex gap-2 flex-wrap">
+              {SOURCES.map(s => {
+                const active = form.source === s;
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, source: s }))}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold border"
+                    style={{
+                      background: active ? blue.soft : "var(--surface-3)",
+                      color: active ? blue.fg : "var(--muted-foreground)",
+                      borderColor: active ? blue.border : "rgb(255 255 255 / 0.06)",
+                    }}
+                  >
+                    {s}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {saveError && (
+          <div
+            className="flex items-center gap-2 text-xs mt-4 p-3 rounded-xl"
+            style={{ background: red.soft, color: red.fg }}
+          >
+            <AlertCircle size={13} />{saveError}
+          </div>
+        )}
+
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl font-bold text-sm text-muted-foreground"
+            style={{ background: "var(--surface-3)" }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onSubmit}
+            disabled={saving}
+            className="flex-1 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+            style={{ background: blue.solid, color: "#fff" }}
+          >
+            {saving && <Loader2 size={14} className="animate-spin" />}
+            Add to Pool
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
